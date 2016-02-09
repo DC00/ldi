@@ -36,7 +36,7 @@ reserved = {
 tokens = [
 	'at',
 	'colon',
-	'comma',
+	'comma',	
 	'divide',
 	'dot',
 	'identifier',
@@ -99,15 +99,66 @@ t_times = r'\*'
 
 # Comments - Single line and block comments. Nested
 # Adapted from PLY documentation
+states = (
+	('comment','exclusive'),
+)
 
+# Match the first coomment
 def t_comment(t):
-	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
-	# Update line number
-	new_lines = 0
-	for c in t.value:
-		if c == '\n':
-			t.lexer.lineno += 1	
+	r'\(\*'
+	t.lexer.code_start = t.lexer.lexpos
+	t.lexer.level = 1
+	t.lexer.begin('comment')
+
+# Rules for the comment state
+def t_comment_begin(t):
+	r'\(\*'
+	t.lexer.level += 1
+
+def t_comment_close(t):
+	r'\*\)'
+	t.lexer.level -= 1
+
+	# If closing brace, return the code fragment
+	if t.lexer.level == 0:
+		t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
+		t.type = "comment"
+		t.lexer.lineno += t.value.count('\n')
+		t.lexer.begin('INITIAL')           
+		# return t
+
+# Matches a comment in this form: (* hello (* *)   <- single comment
+def t_comment_regular_comment(t):
+	r'(\(\*(.|\n)*?\*\))|(\(\*.*)'
 	pass
+
+# String with double quotes "string"
+def t_comment_string(t):
+	r'\"([^\\\n]|(\\.))*?\"'	
+
+# String with single quotes 'string'
+def t_comment_literal(t):
+	r'\'([^\\\n]|(\\.))*?\''
+
+# Any sequence of non-whitespace characters (not braces, strings)
+def t_comment_nonspace(t):
+	r'[^\s\{\}\'\"]+'
+
+# Ignored characters (whitespace)
+t_comment_ignore = " \t\n\r"
+
+# For bad characters, just skip over it
+def t_comment_error(t):
+    t.lexer.skip(1)
+
+# def t_comment(t):
+#	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
+#	# Update line number
+#	new_lines = 0
+#	for c in t.value:
+#		if c == '\n':
+#			t.lexer.lineno += 1	
+#	pass
 
 # Regex expression rules - harder
 def t_type(t):
