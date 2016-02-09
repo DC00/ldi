@@ -5,6 +5,7 @@
 
 import sys
 import lex as lex
+from lex import TOKEN
 
 # Dictionary of reserved words
 reserved = {
@@ -30,7 +31,6 @@ reserved = {
 	'type'		: 'type',
 	'while'		: 'while'		
 }
-
 
 # List of token names. This is always required
 tokens = [
@@ -58,28 +58,70 @@ tokens = [
 ] + list(reserved.values())
 
 # Used during file writing
-LEXEMES = [ 'integer', 'Main', 'IO', 'main', 'Object', 'type', 'identifier', 'string' ]
+LEXEMES = [ 
+	'integer', 
+	'Main', 
+	'IO', 
+	'main', 
+	'Object', 
+	'type', 
+	'identifier', 
+	'string', 
+	'Int',
+	'SELF_TYPE'
+]
+
+# Regex helpers
+digit            = r'([0-9])'
+nondigit         = r'([A-Za-z])'
+identifier       = r'(' + nondigit + r'(' + digit + r'|' + nondigit + r')*)'  
 
 # Regex rules for simple tokens
+t_at = r'@'
 t_colon = r'\:'
+t_comma = r','
+t_dot = r'\.'
+t_divide = r'\/'
+t_equals = r'='
+t_larrow = r'<-'
 t_lparen = r'\('
 t_lbrace = r'{'
+t_le = r'<='
+t_lt = r'<'
+t_minus = r'-'
 t_plus = r'\+'
+t_rarrow = r'=>'
 t_rbrace = r'}'
 t_rparen = r'\)'
 t_semi = r';'
+t_tilde = r'\~'
+t_times = r'\*'
 
-# Regular expression rules - harder
+# Comments - Single line and block comments. Nested
+# Adapted from PLY documentation
+
+def t_comment(t):
+	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
+	# Update line number
+	new_lines = 0
+	for c in t.value:
+		if c == '\n':
+			t.lexer.lineno += 1	
+	pass
+
+# Regex expression rules - harder
 def t_type(t):
-	r'([A-Z])\w+'
+	r'[A-Z]+(\_)*[\w]*'
 	t.type = reserved.get(t.value, 'type')
 	return t
 
 # Lowercase reserved words
+# @TOKEN(identifier)
 def t_identifier(t):
-    r'[a-z_][a-z_0-9]*'
-    t.type = reserved.get(t.value, 'identifier')    	# Check for reserved words, if not found
-    return t											# default value is 'identifier'
+	r'\b[a-z]+(\_)*(\-)*(\w)*'
+	# r'\b[a-z]+(\_)*[A-Za-z]+'
+	t.type = reserved.get(t.value, 'identifier')    	# Check for reserved words, if not found
+	return t											# default value is 'identifier'
 
 # Match quoted strings
 def t_string(t):
@@ -88,8 +130,8 @@ def t_string(t):
 	return t
 
 def t_integer(t):
-	r'\d+'
-	t.value = int(t.value)	  
+	r'[0-9]+'
+	t.value = int(t.value)
 	return t
 
 # Define a rule so we can track line numbers
@@ -98,11 +140,11 @@ def t_newline(t):
 	t.lexer.lineno += len(t.value)
 
 # A string containing ignored characters (spaces and tabs)
-t_ignore  = ' \t'
+t_ignore  = ' \t\r'
 
 # Error handling rule
 def t_error(t):
-	print "ERROR: %d: LEXER: Illegal character '%s'" % (t.lexer.lineno, t.value[0])
+	print "ERROR: %d: Lexer: Illegal character %s" % (t.lexer.lineno, t.value[0])
 	exit(1)
 
 # Build the lexer
@@ -127,6 +169,6 @@ while True:
 	if tok.type in LEXEMES:
 		out_string = out_string + (str(tok.value) + "\n")
 
-out_file = open(sys.argv[1] + "-lex", 'w')
+out_file = open(sys.argv[1] + "-lex2", 'w')
 out_file.write(out_string)
 out_file.close()
