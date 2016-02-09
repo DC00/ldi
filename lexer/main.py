@@ -55,7 +55,7 @@ tokens = [
 	'rbrace',
 	'rparen',
 	'semi',
-	'single',
+	'singlecomment',
 	'string',
 	'tilde',
 	'times',
@@ -92,7 +92,7 @@ t_lparen = r'\('
 t_lbrace = r'{'
 t_le = r'<='
 t_lt = r'<'
-t_minus = r'-'
+t_minus = r'\-'
 t_plus = r'\+'
 t_rarrow = r'=>'
 # t_rbrace = r'\}'
@@ -114,11 +114,6 @@ def t_semi(t):
 # Comments - Single line and block comments. Nested
 # Adapted from PLY documentation
 
-# def t_single(t):
-# 	r'((--)+(.)*)'
-# 	pass
-
-
 # def t_comment(t):
 #	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
 #	# Update line number
@@ -128,7 +123,9 @@ def t_semi(t):
 #			t.lexer.lineno += 1	
 #	pass
 
-
+def t_singlecomment(t):
+	r'\-\-(.*)?'
+	pass
 
 
 states = (
