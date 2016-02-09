@@ -7,6 +7,8 @@ import sys
 import lex as lex
 from lex import TOKEN
 
+global comment_level
+comment_level = 0
 # Dictionary of reserved words
 reserved = {
 	'case' 		: 'case',
@@ -35,6 +37,7 @@ reserved = {
 # List of token names. This is always required
 tokens = [
 	'at',
+	'capclass',
 	'colon',
 	'comma',	
 	'divide',
@@ -52,6 +55,7 @@ tokens = [
 	'rbrace',
 	'rparen',
 	'semi',
+	'single',
 	'string',
 	'tilde',
 	'times',
@@ -65,7 +69,7 @@ LEXEMES = [
 	'main', 
 	'Object', 
 	'type', 
-	'identifier', 
+	'identifier',
 	'string', 
 	'Int',
 	'SELF_TYPE'
@@ -91,65 +95,29 @@ t_lt = r'<'
 t_minus = r'-'
 t_plus = r'\+'
 t_rarrow = r'=>'
-t_rbrace = r'}'
+# t_rbrace = r'\}'
 t_rparen = r'\)'
-t_semi = r';'
+# t_semi = r'\;'
 t_tilde = r'\~'
 t_times = r'\*'
 
+def t_rbrace(t):
+	r'\}'
+	t.value = str(t.value)
+	return t	
+
+def t_semi(t):
+	r'\;'
+	t.value = str(t.value)
+	return t
+
 # Comments - Single line and block comments. Nested
 # Adapted from PLY documentation
-states = (
-	('comment','exclusive'),
-)
 
-# Match the first coomment
-def t_comment(t):
-	r'\(\*'
-	t.lexer.code_start = t.lexer.lexpos
-	t.lexer.level = 1
-	t.lexer.begin('comment')
+# def t_single(t):
+# 	r'((--)+(.)*)'
+# 	pass
 
-# Rules for the comment state
-def t_comment_begin(t):
-	r'\(\*'
-	t.lexer.level += 1
-
-def t_comment_close(t):
-	r'\*\)'
-	t.lexer.level -= 1
-
-	# If closing brace, return the code fragment
-	if t.lexer.level == 0:
-		t.value = t.lexer.lexdata[t.lexer.code_start:t.lexer.lexpos+1]
-		t.type = "comment"
-		t.lexer.lineno += t.value.count('\n')
-		t.lexer.begin('INITIAL')           
-		# return t
-
-# Matches a comment in this form: (* hello (* *)   <- single comment
-def t_comment_regular_comment(t):
-	r'(\(\*(.|\n)*?\*\))|(\(\*.*)'
-	pass
-
-# String with double quotes "string"
-def t_comment_string(t):
-	r'\"([^\\\n]|(\\.))*?\"'	
-
-# String with single quotes 'string'
-def t_comment_literal(t):
-	r'\'([^\\\n]|(\\.))*?\''
-
-# Any sequence of non-whitespace characters (not braces, strings)
-def t_comment_nonspace(t):
-	r'[^\s\{\}\'\"]+'
-
-# Ignored characters (whitespace)
-t_comment_ignore = " \t\n\r"
-
-# For bad characters, just skip over it
-def t_comment_error(t):
-    t.lexer.skip(1)
 
 # def t_comment(t):
 #	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
@@ -160,6 +128,55 @@ def t_comment_error(t):
 #			t.lexer.lineno += 1	
 #	pass
 
+
+
+
+states = (
+	('comment', 'exclusive'),
+)
+
+def t_begin_comment(t):
+	r'\(\*'
+	global comment_level
+	t.lexer.push_state('comment')             # Starts 'foo' state
+	comment_level += 1
+
+def t_comment_end(t):
+	r'\*\)'
+	t.lexer.pop_state()                   # Back to the previous state
+	global comment_level
+	comment_level -= 1
+
+def t_comment_string(t):
+	r'\"([^\\\n]|(\\.))*?\"'	
+	pass
+
+def t_comment_literal(t):
+	r'\'([^\\\n]|(\\.))*?\''
+	pass
+
+def t_comment_words(t):
+	r'[\w]+'
+	pass
+
+t_comment_ignore = ' \t\r'
+
+def t_comment_error(t):
+	t.lexer.skip(1)
+
+
+
+
+
+
+
+
+# Handles capitalized Class
+def t_capclass(t):
+	r'Class'
+	t.type = "class"
+	return t
+
 # Regex expression rules - harder
 def t_type(t):
 	r'[A-Z]+(\_)*[\w]*'
@@ -167,7 +184,6 @@ def t_type(t):
 	return t
 
 # Lowercase reserved words
-# @TOKEN(identifier)
 def t_identifier(t):
 	r'\b[a-z]+(\_)*(\-)*(\w)*'
 	# r'\b[a-z]+(\_)*[A-Za-z]+'
@@ -191,7 +207,7 @@ def t_newline(t):
 	t.lexer.lineno += len(t.value)
 
 # A string containing ignored characters (spaces and tabs)
-t_ignore  = ' \t\r'
+t_ignore  = ' \t\r\f\v'
 
 # Error handling rule
 def t_error(t):
@@ -220,6 +236,6 @@ while True:
 	if tok.type in LEXEMES:
 		out_string = out_string + (str(tok.value) + "\n")
 
-out_file = open(sys.argv[1] + "-lex2", 'w')
+out_file = open(sys.argv[1] + "-lex", 'w')
 out_file.write(out_string)
 out_file.close()
