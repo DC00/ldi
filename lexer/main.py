@@ -95,76 +95,61 @@ t_lt = r'<'
 t_minus = r'\-'
 t_plus = r'\+'
 t_rarrow = r'=>'
-# t_rbrace = r'\}'
+t_rbrace = r'\}'
 t_rparen = r'\)'
-# t_semi = r'\;'
+t_semi = r'\;'
 t_tilde = r'\~'
 t_times = r'\*'
-
-def t_rbrace(t):
-	r'\}'
-	t.value = str(t.value)
-	return t	
-
-def t_semi(t):
-	r'\;'
-	t.value = str(t.value)
-	return t
 
 # Comments - Single line and block comments. Nested
 # Adapted from PLY documentation
 
-# def t_comment(t):
-#	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
-#	# Update line number
-#	new_lines = 0
-#	for c in t.value:
-#		if c == '\n':
-#			t.lexer.lineno += 1	
-#	pass
+def t_comment(t):
+	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
+	# Update line number
+	new_lines = 0
+	for c in t.value:
+		if c == '\n':
+			t.lexer.lineno += 1	
+	pass
 
 def t_singlecomment(t):
 	r'\-\-(.*)?'
 	pass
 
 
-states = (
-	('comment', 'exclusive'),
-)
+# states = (
+# 	('comment', 'exclusive'),
+# )
 
-def t_begin_comment(t):
-	r'\(\*'
-	global comment_level
-	t.lexer.push_state('comment')             # Starts 'foo' state
-	comment_level += 1
+# def t_begin_comment(t):
+# 	r'\(\*'
+# 	global comment_level
+# 	t.lexer.push_state('comment')             # Starts 'foo' state
+# 	comment_level += 1
 
-def t_comment_end(t):
-	r'\*\)'
-	t.lexer.pop_state()                   # Back to the previous state
-	global comment_level
-	comment_level -= 1
+# def t_comment_end(t):
+# 	r'\*\)'
+# 	t.lexer.pop_state()                   # Back to the previous state
+# 	global comment_level
+# 	comment_level -= 1
 
-def t_comment_string(t):
-	r'\"([^\\\n]|(\\.))*?\"'	
-	pass
+# def t_comment_string(t):
+# 	r'\"([^\\\n]|(\\.))*?\"'	
+# 	pass
 
-def t_comment_literal(t):
-	r'\'([^\\\n]|(\\.))*?\''
-	pass
+# def t_comment_literal(t):
+# 	r'\'([^\\\n]|(\\.))*?\''
+# 	pass
 
-def t_comment_words(t):
-	r'[\w]+'
-	pass
+# def t_comment_words(t):
+# 	r'[\w]+'
+# 	pass
 
-t_comment_ignore = ' \t\r'
+# t_comment_ignore = ' \t\r'
 
-def t_comment_error(t):
-	t.lexer.skip(1)
-
-
-
-
-
+# def t_comment_error(t):
+# 	t.lexer.skip(1)
 
 
 
