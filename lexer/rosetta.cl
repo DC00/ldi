@@ -149,6 +149,11 @@ Class Main inherits IO {
 	};
 };
 
+Class AbCdEfG {
+	x : Int;
+};
+
+
 (* The List type is not built in to Cool, so we'll have to define it 
  * ourselves. Cool classes can appear in any order, so we can define
  * List here _after_ our reference to it in Main. *) 

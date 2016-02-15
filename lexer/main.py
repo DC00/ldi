@@ -42,6 +42,7 @@ tokens = [
 	'comma',	
 	'divide',
 	'dot',
+	'eof',
 	'identifier',
 	'integer',
 	'larrow',
@@ -89,7 +90,7 @@ t_divide = r'\/'
 t_equals = r'='
 t_larrow = r'<-'
 t_lparen = r'\('
-t_lbrace = r'{'
+t_lbrace = r'\{'
 t_le = r'<='
 t_lt = r'<'
 t_minus = r'\-'
@@ -105,13 +106,13 @@ t_times = r'\*'
 # Adapted from PLY documentation
 
 def t_comment(t):
-	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
-	# Update line number
-	new_lines = 0
-	for c in t.value:
-		if c == '\n':
-			t.lexer.lineno += 1	
-	pass
+ 	r'((\(\*(.|\n)*?\*\))|(.*\*\)))|((--)+(.)*)'
+ 	# Update line number
+ 	new_lines = 0
+ 	for c in t.value:
+ 		if c == '\n':
+ 			t.lexer.lineno += 1	
+ 	pass
 
 def t_singlecomment(t):
 	r'\-\-(.*)?'
@@ -151,6 +152,40 @@ def t_singlecomment(t):
 # def t_comment_error(t):
 # 	t.lexer.skip(1)
 
+# states = (
+# 	('comment', 'exclusive'),
+# )
+
+# # Match the first {. Enter ccode state.
+# def t_comment(t):
+#     r'\(\*'
+#     t.lexer.code_start = t.lexer.lexpos        # Record the starting position
+#     t.lexer.level = 1                          # Initial brace level
+#     t.lexer.begin('comment')                     # Enter 'ccode' state
+
+# # Rules for the ccode state
+# def t_comment_open(t):     
+#     r'\(\*'
+#     t.lexer.level +=1                
+
+# def t_comment_close(t):
+# 	r'\*\)'
+# 	t.lexer.level -=1
+
+# 	if t.lexer.level == 0:
+# 		t.lexer.lineno += t.value.count('\n')
+# 		t.lexer.begin('INITIAL')           
+
+# def t_comment_eof(t):
+		
+
+# # Ignored characters (whitespace)
+# t_comment_ignore = ""
+
+# # For bad characters, we just skip over it
+# def t_comment_error(t):
+# 	t.lexer.skip(1)
+
 
 
 # Handles capitalized Class
@@ -175,18 +210,27 @@ def t_identifier(t):
 # Match quoted strings
 def t_string(t):
 	r'"(?:[^"\\]|\\.)*"'
-	t.value = t.value[1:-1]
-	return t
+	# r"(?:[^\n\x00]|.)+"
+	if len(t.value) > 1024:
+		t_error(t)
+	else:
+		t.value = t.value[1:-1]
+		return t
 
 def t_integer(t):
 	r'[0-9]+'
-	t.value = int(t.value)
-	return t
+	num = int(t.value)
+	if num >= 2**30:
+		t_error(t)
+	else:
+		t.value = int(t.value)
+		return t
 
 # Define a rule so we can track line numbers
 def t_newline(t):
 	r'\n+'
 	t.lexer.lineno += len(t.value)
+
 
 # A string containing ignored characters (spaces and tabs)
 t_ignore  = ' \t\r\f\v'

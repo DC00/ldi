@@ -1,0 +1,34 @@
+1
+class
+1
+type
+Main
+1
+inherits
+1
+type
+IO
+1
+string
+
+2
+identifier
+main
+2
+string
+) : Object { 
+3
+string
+ in
+4
+identifier
+out_string
+4
+string
+x)
+5
+string
+ ;
+6
+string
+ ; 
