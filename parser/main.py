@@ -60,7 +60,7 @@ while tokens_lines != []:
 		pa2_tokens = pa2_tokens + \
 						[(line_number, token_type.upper(), token_lexeme)]
 	
-print pa2_tokens
+# print pa2_tokens
 
 
 # Use PA2 Tokens as Lexer
@@ -85,49 +85,26 @@ pa2lexer = PA2Lexer()
 # Define PA3 Parser
 # All tokens are capitalized
 tokens = (
-	'AT',
-	'CASE',
-	'CLASS',
-	'COLON',
-	'COMMA',
-	'DIVIDE',
-	'DOT',
-	'ELSE',
-	'EQUALS',
-	'ESAC',
-	'FALSE',
-	'FI',
-	'IDENTIFIER',
-	'IF',
-	'IN',
-	'INHERITS',
-	'INTEGER',
-	'ISVOID',
-	'LARROW',
-	'LBRACE',
-	'LE',
-	'LET',
-	'LOOP',
-	'LPAREN',
-	'LT',
-	'MINUS',
-	'NEW',
-	'NOT',
-	'OF',
-	'PLUS',
-	'POOL',
-	'RARROW',
-	'RBRACE',
-	'RPAREN',
-	'SEMI',
-	'STRING',
-	'THEN',
-	'TILDE',
-	'TIMES',
-	'TRUE',
-	'TYPE',
-	'WHILE',
+	'CLASS', 'TYPE', 'LBRACE', 'IDENTIFIER',
+	'COLON', 'SEMI', 'RBRACE', 'LARROW', 'PLUS',
+	 'INTEGER', 'TIMES',
+# All tokens alphabetized
+#	'AT', 'CASE', 'CLASS', 'COLON', 'COMMA', 
+#	'DIVIDE', 'DOT', 'ELSE', 'EQUALS', 'ESAC',
+#	'FALSE', 'FI', 'IDENTIFIER', 'IF', 'IN',
+#	'INHERITS', 'INTEGER', 'ISVOID', 'LARROW', 'LBRACE', 
+#	'LE', 'LET', 'LOOP', 'LPAREN', 'LT', 'MINUS', 
+#	'NEW', 'NOT', 'OF', 'PLUS', 'POOL', 'RARROW',
+#	'RBRACE', 'RPAREN', 'SEMI', 'STRING', 'THEN',
+#	'TILDE', 'TIMES', 'TRUE', 'TYPE', 'WHILE',
 )
+
+# Decide which binds more tightly
+precedence = (
+	('left', 'PLUS'),
+	('left', 'TIMES'),
+)
+
 
 # Our AST is nested tuples
 #
@@ -180,6 +157,10 @@ def p_type(p):
 	'type : TYPE'
 	p[0] = (p.lineno(1), p[1])
 
+def p_identifier(p):
+	'identifier : IDENTIFIER'
+	p[0] = (p.lineno(1), p[1])
+
 def p_featurelist_none(p):
 	'featurelist : '
 	p[0] = []
@@ -195,27 +176,110 @@ def p_feature_attribute_no_init(p):
 	'feature : identifier COLON type'
 	p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 
+def p_feature_attribute_init(p):
+	'feature : identifier COLON type LARROW exp'
+	p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
+
+# This is the bitch part. All of the expressions
+# p.lineno() only works for things in uppercase letters
+# feature ::= ID ....
+#		| ID : TYPE [ <- expr ]
+def p_exp_plus(p):
+	'exp : exp PLUS exp'
+	# p[0] = (p.lineno(1), 'plus', p[1], p[3])
+	p[0] = ((p[1][0]), 'plus', p[1], p[3])
+
+def p_exp_times(p):
+	'exp : exp TIMES exp'
+	p[0] = ((p[1][0]), 'times', p[1], p[3])
+
+def p_exp_integer(p):
+	'exp : INTEGER'
+	p[0] = (p.lineno(1), 'integer', p[1])
+
+def p_error(p):
+	if p:
+		print "ERROR: ",  p.lineno, ": Parser: parse error near ", p.type
+		exit(1)
+		# Just discard the token and tell the parser its's okay
+	else:
+		print "ERROR: Syntax error at EOF" # FIXME Track line number to output end of file stuff
+
+
+
+
 # Build the PA3 parser from the above rules
+# All methods defining a rule must come
+# above the parser line
+parser = yacc.yacc()
+ast = yacc.parse(lexer=pa2lexer)
+
+# print ast
+
+# Output a PA3 CL-AST File
+# input = foo.cl-lex -> output = foo.cl-ast
+ast_filename = (sys.argv[1])[:-4] + "-ast"
+fout = open(ast_filename, 'w')
+
+# Define a number of print_foo() methods
+# that call each other to serialize the AST
+
+# Serialize AST
+
+# Passing a function to a function
+def print_list(ast, print_element_function): # higher-order function
+	fout.write(str(len(ast)) + "\n")
+	for elem in ast:
+		print_element_function(elem)
+
+def print_identifier(ast):
+	# ast = (p.lineno(1), p[1])
+	# ast[1] = identifier string
+	fout.write( str(ast[0]) + "\n")
+	fout.write(ast[1] + "\n")
 
 
+def print_exp(ast):
+	# ast = (p.lineno(1), 'plus', p[1], p[3])
+	# ast = (p.lineno(1), 'minus', p[1], p[3])
+	# ast = (p.lineno(1), 'integer', p[1])
+	fout.write( str(ast[0]) + "\n" )
+	if ast[1] in ['plus', 'times']:
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_exp(ast[3])
+	elif ast[1] == 'integer':
+		fout.write(ast[1] + "\n")
+		fout.write(str(ast[2]) + "\n")
+	else:
+		print "unhandled expression"
+		exit(1)
 
 
+def print_feature(ast):
+	# ast = (p.lineno(1), 'attribute_no_init', p[1], p[3])
+	if ast[1] == 'attribute_no_init':
+		fout.write("attribute_no_init\n")
+		print_identifier(ast[2])
+		print_identifier(ast[3])
+	elif ast[1] == 'attribute_init':
+		# ast = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
+		fout.write("attribute_init\n")
+		print_identifier(ast[2])
+		print_identifier(ast[3])
+		print_exp(ast[4])
 
+def print_class(ast):
+	# ast = (p.lineno(1), 'class_noinherit', p[2] name, p[4] feature list)
+	print_identifier(ast[2])
+	fout.write("no_inherits\n");
+	print_list(ast[3], print_feature)
 
+def print_program(ast):
+	print_list(ast, print_class)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+print_program(ast)
+fout.close()
 
 
 

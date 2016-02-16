@@ -1,0 +1,301 @@
+Created by PLY version 3.8 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> program
+Rule 1     program -> classlist
+Rule 2     classlist -> <empty>
+Rule 3     classlist -> class SEMI classlist
+Rule 4     class -> CLASS type LBRACE featurelist RBRACE
+Rule 5     type -> TYPE
+Rule 6     identifier -> IDENTIFIER
+Rule 7     featurelist -> <empty>
+Rule 8     featurelist -> feature SEMI featurelist
+Rule 9     feature -> identifier COLON type
+Rule 10    feature -> identifier COLON type LARROW exp
+Rule 11    exp -> exp PLUS exp
+Rule 12    exp -> exp TIMES exp
+Rule 13    exp -> INTEGER
+
+Terminals, with rules where they appear
+
+CLASS                : 4
+COLON                : 9 10
+IDENTIFIER           : 6
+INTEGER              : 13
+LARROW               : 10
+LBRACE               : 4
+PLUS                 : 11
+RBRACE               : 4
+SEMI                 : 3 8
+TIMES                : 12
+TYPE                 : 5
+error                : 
+
+Nonterminals, with rules where they appear
+
+class                : 3
+classlist            : 1 3
+exp                  : 10 11 11 12 12
+feature              : 8
+featurelist          : 4 8
+identifier           : 9 10
+program              : 0
+type                 : 4 9 10
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . program
+    (1) program -> . classlist
+    (2) classlist -> .
+    (3) classlist -> . class SEMI classlist
+    (4) class -> . CLASS type LBRACE featurelist RBRACE
+
+    $end            reduce using rule 2 (classlist -> .)
+    CLASS           shift and go to state 2
+
+    classlist                      shift and go to state 1
+    program                        shift and go to state 3
+    class                          shift and go to state 4
+
+state 1
+
+    (1) program -> classlist .
+
+    $end            reduce using rule 1 (program -> classlist .)
+
+
+state 2
+
+    (4) class -> CLASS . type LBRACE featurelist RBRACE
+    (5) type -> . TYPE
+
+    TYPE            shift and go to state 6
+
+    type                           shift and go to state 5
+
+state 3
+
+    (0) S' -> program .
+
+
+
+state 4
+
+    (3) classlist -> class . SEMI classlist
+
+    SEMI            shift and go to state 7
+
+
+state 5
+
+    (4) class -> CLASS type . LBRACE featurelist RBRACE
+
+    LBRACE          shift and go to state 8
+
+
+state 6
+
+    (5) type -> TYPE .
+
+    LBRACE          reduce using rule 5 (type -> TYPE .)
+    LARROW          reduce using rule 5 (type -> TYPE .)
+    SEMI            reduce using rule 5 (type -> TYPE .)
+
+
+state 7
+
+    (3) classlist -> class SEMI . classlist
+    (2) classlist -> .
+    (3) classlist -> . class SEMI classlist
+    (4) class -> . CLASS type LBRACE featurelist RBRACE
+
+    $end            reduce using rule 2 (classlist -> .)
+    CLASS           shift and go to state 2
+
+    classlist                      shift and go to state 9
+    class                          shift and go to state 4
+
+state 8
+
+    (4) class -> CLASS type LBRACE . featurelist RBRACE
+    (7) featurelist -> .
+    (8) featurelist -> . feature SEMI featurelist
+    (9) feature -> . identifier COLON type
+    (10) feature -> . identifier COLON type LARROW exp
+    (6) identifier -> . IDENTIFIER
+
+    RBRACE          reduce using rule 7 (featurelist -> .)
+    IDENTIFIER      shift and go to state 12
+
+    identifier                     shift and go to state 13
+    featurelist                    shift and go to state 11
+    feature                        shift and go to state 10
+
+state 9
+
+    (3) classlist -> class SEMI classlist .
+
+    $end            reduce using rule 3 (classlist -> class SEMI classlist .)
+
+
+state 10
+
+    (8) featurelist -> feature . SEMI featurelist
+
+    SEMI            shift and go to state 14
+
+
+state 11
+
+    (4) class -> CLASS type LBRACE featurelist . RBRACE
+
+    RBRACE          shift and go to state 15
+
+
+state 12
+
+    (6) identifier -> IDENTIFIER .
+
+    COLON           reduce using rule 6 (identifier -> IDENTIFIER .)
+
+
+state 13
+
+    (9) feature -> identifier . COLON type
+    (10) feature -> identifier . COLON type LARROW exp
+
+    COLON           shift and go to state 16
+
+
+state 14
+
+    (8) featurelist -> feature SEMI . featurelist
+    (7) featurelist -> .
+    (8) featurelist -> . feature SEMI featurelist
+    (9) feature -> . identifier COLON type
+    (10) feature -> . identifier COLON type LARROW exp
+    (6) identifier -> . IDENTIFIER
+
+    RBRACE          reduce using rule 7 (featurelist -> .)
+    IDENTIFIER      shift and go to state 12
+
+    identifier                     shift and go to state 13
+    feature                        shift and go to state 10
+    featurelist                    shift and go to state 17
+
+state 15
+
+    (4) class -> CLASS type LBRACE featurelist RBRACE .
+
+    SEMI            reduce using rule 4 (class -> CLASS type LBRACE featurelist RBRACE .)
+
+
+state 16
+
+    (9) feature -> identifier COLON . type
+    (10) feature -> identifier COLON . type LARROW exp
+    (5) type -> . TYPE
+
+    TYPE            shift and go to state 6
+
+    type                           shift and go to state 18
+
+state 17
+
+    (8) featurelist -> feature SEMI featurelist .
+
+    RBRACE          reduce using rule 8 (featurelist -> feature SEMI featurelist .)
+
+
+state 18
+
+    (9) feature -> identifier COLON type .
+    (10) feature -> identifier COLON type . LARROW exp
+
+    SEMI            reduce using rule 9 (feature -> identifier COLON type .)
+    LARROW          shift and go to state 19
+
+
+state 19
+
+    (10) feature -> identifier COLON type LARROW . exp
+    (11) exp -> . exp PLUS exp
+    (12) exp -> . exp TIMES exp
+    (13) exp -> . INTEGER
+
+    INTEGER         shift and go to state 21
+
+    exp                            shift and go to state 20
+
+state 20
+
+    (10) feature -> identifier COLON type LARROW exp .
+    (11) exp -> exp . PLUS exp
+    (12) exp -> exp . TIMES exp
+
+    SEMI            reduce using rule 10 (feature -> identifier COLON type LARROW exp .)
+    PLUS            shift and go to state 23
+    TIMES           shift and go to state 22
+
+
+state 21
+
+    (13) exp -> INTEGER .
+
+    PLUS            reduce using rule 13 (exp -> INTEGER .)
+    TIMES           reduce using rule 13 (exp -> INTEGER .)
+    SEMI            reduce using rule 13 (exp -> INTEGER .)
+
+
+state 22
+
+    (12) exp -> exp TIMES . exp
+    (11) exp -> . exp PLUS exp
+    (12) exp -> . exp TIMES exp
+    (13) exp -> . INTEGER
+
+    INTEGER         shift and go to state 21
+
+    exp                            shift and go to state 24
+
+state 23
+
+    (11) exp -> exp PLUS . exp
+    (11) exp -> . exp PLUS exp
+    (12) exp -> . exp TIMES exp
+    (13) exp -> . INTEGER
+
+    INTEGER         shift and go to state 21
+
+    exp                            shift and go to state 25
+
+state 24
+
+    (12) exp -> exp TIMES exp .
+    (11) exp -> exp . PLUS exp
+    (12) exp -> exp . TIMES exp
+
+    PLUS            reduce using rule 12 (exp -> exp TIMES exp .)
+    TIMES           reduce using rule 12 (exp -> exp TIMES exp .)
+    SEMI            reduce using rule 12 (exp -> exp TIMES exp .)
+
+  ! PLUS            [ shift and go to state 23 ]
+  ! TIMES           [ shift and go to state 22 ]
+
+
+state 25
+
+    (11) exp -> exp PLUS exp .
+    (11) exp -> exp . PLUS exp
+    (12) exp -> exp . TIMES exp
+
+    PLUS            reduce using rule 11 (exp -> exp PLUS exp .)
+    SEMI            reduce using rule 11 (exp -> exp PLUS exp .)
+    TIMES           shift and go to state 22
+
+  ! TIMES           [ reduce using rule 11 (exp -> exp PLUS exp .) ]
+  ! PLUS            [ shift and go to state 23 ]
+
