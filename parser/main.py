@@ -294,9 +294,11 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
-	elif ast[1] in ['integer','string','true','false']:
+	elif ast[1] in ['integer','string']:
 		fout.write(ast[1] + "\n")
-		#fout.write(str(ast[2]) + "\n")
+		fout.write(str(ast[2]) + "\n")
+	elif ast[1] in ['true', 'false']:
+		fout.write(ast[1])
 	else:
 		print "unhandled expression"
 		exit(1)
