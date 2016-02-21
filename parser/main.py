@@ -206,6 +206,15 @@ def p_exp_divide(p):
 	'exp : exp DIVIDE exp'
 	p[0] = ((p[1][0]), 'divide', p[1], p[3])
 
+def p_exp_id(p):
+	'exp : IDENTIFIER'
+	p[0] = (p.lineno(1), 'identifier', p[1])
+
+def p_exp_lbrace(p):
+	'exp : LBRACE'
+	p[0] = (p.lineno(1), 'lbrace', p[1])
+	
+
 	# integer
 def p_exp_integer(p):
 	'exp : INTEGER'
@@ -216,7 +225,13 @@ def p_exp_string(p):
 	'exp : STRING'
 	p[0] = (p.lineno(1), 'string', p[1])
 
+def p_exp_true(p):
+	'exp : TRUE'
+	p[0] = (p.lineno(1), 'true', p[1])
 
+def p_exp_false(p):
+	'exp : FALSE'
+	p[0] = (p.lineno(1), 'false', p[1])
 
 
 def p_error(p):
@@ -270,9 +285,9 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
-	elif ast[1] in ['integer', 'string']:
+	elif ast[1] in ['integer', 'string','true','false']:
 		fout.write(ast[1] + "\n")
-		fout.write(str(ast[2]) + "\n")
+		#fout.write(str(ast[2]) + "\n")
 	else:
 		print "unhandled expression"
 		exit(1)

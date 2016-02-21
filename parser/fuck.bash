@@ -1,5 +1,6 @@
 #!/bin/bash
 TEST_FILE="$1"
+KEEP_DIFF="$2"
 
 if [[ -e main.py ]] ; then
 	echo "Testing $1"
@@ -8,4 +9,6 @@ if [[ -e main.py ]] ; then
    	python main.py $TEST_FILE-lex
 	echo "---------------------------------------------------- diff"
 	diff -b -B -E -w ref_$TEST_FILE-ast $TEST_FILE-ast
+	diff $TEST_FILE-ast ref_$TEST_FILE-ast
+	# rm ref_$TEST_FILE-ast $TEST_FILE-ast $TEST_FILE-lex
 fi
