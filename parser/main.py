@@ -184,18 +184,30 @@ def p_feature_attribute_init(p):
 # p.lineno() only works for things in uppercase letters
 # feature ::= ID ....
 #		| ID : TYPE [ <- expr ]
+
+# formal ::= ID : TYPE
+
+# expr ::= ...
+
+	# expr + expr
 def p_exp_plus(p):
 	'exp : exp PLUS exp'
 	# p[0] = (p.lineno(1), 'plus', p[1], p[3])
 	p[0] = ((p[1][0]), 'plus', p[1], p[3])
 
+	# expr * expr
 def p_exp_times(p):
 	'exp : exp TIMES exp'
 	p[0] = ((p[1][0]), 'times', p[1], p[3])
 
+	# integer
 def p_exp_integer(p):
 	'exp : INTEGER'
 	p[0] = (p.lineno(1), 'integer', p[1])
+
+
+
+
 
 def p_error(p):
 	if p:
