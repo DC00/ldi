@@ -131,20 +131,22 @@ precedence = (
 #			| class ; classlist
 
 
-# TODO: fix [[class]]+ the plus
+# program ::= [[class;]]+
+
 def p_program_classlist(p):
 	'program : classlist'
 	p[0] = p[1]
 
-def p_classlist_none(p):
-	'classlist : '
-	p[0] = []
-
-def p_classlist_some(p):
-	'classlist : class SEMI classlist'
-	p[0] = [p[1]] + p[3]
+def p_classlist(p):
+	'''classlist : class SEMI classlist
+				 | class SEMI'''
+	if len(p) == 4:
+		p[0] = [p[1]] + p[3]
+	elif len(p) == 3:
+		p[0] = [p[1]] 
 
 # class ::= class TYPE [inherits TYPE] { [[feature;]]* }
+
 def p_class_noinherit(p):
 	'class : CLASS type LBRACE featurelist RBRACE'
 	p[0] = (p.lineno(1), 'class_noinherit', p[2], p[4])
@@ -205,11 +207,16 @@ def p_exp_times(p):
 def p_exp_divide(p):
 	'exp : exp DIVIDE exp'
 	p[0] = ((p[1][0]), 'divide', p[1], p[3])
+	
+	# ~ expr
+def p_exp_negate(p):
+	'exp : TILDE exp'
+	p[0] = (p.lineno(1), 'negate', p[2])
 
-def p_exp_id(p):
-	'exp : IDENTIFIER'
-	p[0] = (p.lineno(1), 'identifier', p[1])
+	# ID
+# in p_identifier
 
+	
 def p_exp_lbrace(p):
 	'exp : LBRACE'
 	p[0] = (p.lineno(1), 'lbrace', p[1])
@@ -225,10 +232,12 @@ def p_exp_string(p):
 	'exp : STRING'
 	p[0] = (p.lineno(1), 'string', p[1])
 
+	# true
 def p_exp_true(p):
 	'exp : TRUE'
 	p[0] = (p.lineno(1), 'true', p[1])
 
+	# false
 def p_exp_false(p):
 	'exp : FALSE'
 	p[0] = (p.lineno(1), 'false', p[1])
@@ -285,7 +294,7 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
-	elif ast[1] in ['integer', 'string','true','false']:
+	elif ast[1] in ['integer','string','true','false']:
 		fout.write(ast[1] + "\n")
 		#fout.write(str(ast[2]) + "\n")
 	else:
