@@ -85,24 +85,20 @@ pa2lexer = PA2Lexer()
 # Define PA3 Parser
 # All tokens are capitalized
 tokens = (
-	'CLASS', 'TYPE', 'LBRACE', 'IDENTIFIER',
-	'COLON', 'SEMI', 'RBRACE', 'LARROW', 'PLUS',
-	 'INTEGER', 'TIMES',
-# All tokens alphabetized
-#	'AT', 'CASE', 'CLASS', 'COLON', 'COMMA', 
-#	'DIVIDE', 'DOT', 'ELSE', 'EQUALS', 'ESAC',
-#	'FALSE', 'FI', 'IDENTIFIER', 'IF', 'IN',
-#	'INHERITS', 'INTEGER', 'ISVOID', 'LARROW', 'LBRACE', 
-#	'LE', 'LET', 'LOOP', 'LPAREN', 'LT', 'MINUS', 
-#	'NEW', 'NOT', 'OF', 'PLUS', 'POOL', 'RARROW',
-#	'RBRACE', 'RPAREN', 'SEMI', 'STRING', 'THEN',
-#	'TILDE', 'TIMES', 'TRUE', 'TYPE', 'WHILE',
+	'AT', 'CASE', 'CLASS', 'COLON', 'COMMA', 
+	'DIVIDE', 'DOT', 'ELSE', 'EQUALS', 'ESAC',
+	'FALSE', 'FI', 'IDENTIFIER', 'IF', 'IN',
+	'INHERITS', 'INTEGER', 'ISVOID', 'LARROW', 'LBRACE', 
+	'LE', 'LET', 'LOOP', 'LPAREN', 'LT', 'MINUS', 
+	'NEW', 'NOT', 'OF', 'PLUS', 'POOL', 'RARROW',
+	'RBRACE', 'RPAREN', 'SEMI', 'STRING', 'THEN',
+	'TILDE', 'TIMES', 'TRUE', 'TYPE', 'WHILE',
 )
 
 # Decide which binds more tightly
 precedence = (
-	('left', 'PLUS'),
-	('left', 'TIMES'),
+	('left', 'PLUS', 'MINUS'),
+	('left', 'TIMES', 'DIVIDE'),
 )
 
 
@@ -195,16 +191,30 @@ def p_exp_plus(p):
 	# p[0] = (p.lineno(1), 'plus', p[1], p[3])
 	p[0] = ((p[1][0]), 'plus', p[1], p[3])
 
+	# expr - expr
+def p_exp_minus(p):
+	'exp : exp MINUS exp'
+	p[0] = ((p[1][0]), 'minus', p[1], p[3])
+
 	# expr * expr
 def p_exp_times(p):
 	'exp : exp TIMES exp'
 	p[0] = ((p[1][0]), 'times', p[1], p[3])
+
+	# expr / expr
+def p_exp_divide(p):
+	'exp : exp DIVIDE exp'
+	p[0] = ((p[1][0]), 'divide', p[1], p[3])
 
 	# integer
 def p_exp_integer(p):
 	'exp : INTEGER'
 	p[0] = (p.lineno(1), 'integer', p[1])
 
+	# string
+def p_exp_string(p):
+	'exp : STRING'
+	p[0] = (p.lineno(1), 'string', p[1])
 
 
 
@@ -256,11 +266,11 @@ def print_exp(ast):
 	# ast = (p.lineno(1), 'minus', p[1], p[3])
 	# ast = (p.lineno(1), 'integer', p[1])
 	fout.write( str(ast[0]) + "\n" )
-	if ast[1] in ['plus', 'times']:
+	if ast[1] in ['plus','minus','times','divide']:
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
-	elif ast[1] == 'integer':
+	elif ast[1] in ['integer', 'string']:
 		fout.write(ast[1] + "\n")
 		fout.write(str(ast[2]) + "\n")
 	else:
