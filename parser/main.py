@@ -96,6 +96,9 @@ tokens = (
 )
 
 # Decide which binds more tightly
+# TODO: add in precedence for lt, gt, eq, etc.
+#		there exits 42 shift/reduce conflicts
+
 precedence = (
 	('left', 'PLUS', 'MINUS'),
 	('left', 'TIMES', 'DIVIDE'),
@@ -173,7 +176,6 @@ def p_featurelist(p):
 
 # feature ::= ID( [formal [[ formal]]* ]) : TYPE { expr }
 
-
 #			| ID : TYPE[ <- expr ]
 
 def p_feature_no_init(p):
@@ -184,7 +186,6 @@ def p_feature_no_init(p):
 	elif len(p) == 4:
 		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 
-# This is the bitch part. All of the expressions
 # p.lineno() only works for things in uppercase letters
 # feature ::= ID ....
 #		| ID : TYPE [ <- expr ]
@@ -192,6 +193,32 @@ def p_feature_no_init(p):
 # formal ::= ID : TYPE
 
 # expr ::= ...
+	
+	# TODO: need to implement print method
+	# FIXME: causes YaccError: Unable to build parser
+
+	# { [[ expr; ]]+ }
+#def p_exp_block(p):
+#	'exp : LBRACE explist RBRACE'
+#	p[0] = (p.lineno(1), 'block', p[2])
+
+#def p_explist(p):
+#	'''explist : exp SEMI explist
+#			   : exp SEMI'''
+#	if len(p) == 4:
+#		p[0] = [p[1]] + p[3]
+#	elif len(p) == 3:
+#		p[0] = [p[1]] 
+
+	# new TYPE
+def p_exp_new(p):
+	'exp : NEW type' 
+	p[0] = (p.lineno(1), 'new', p[2])
+
+	# isvoid expr
+def p_exp_isvoid(p):
+	'exp : ISVOID exp'
+	p[0] = (p.lineno(1), 'isvoid', p[2])
 
 	# expr + expr
 def p_exp_plus(p):
@@ -219,13 +246,32 @@ def p_exp_negate(p):
 	'exp : TILDE exp'
 	p[0] = (p.lineno(1), 'negate', p[2])
 
+	# expr < expr
+def p_exp_lt(p):
+	'exp : exp LT exp'
+	p[0] = ((p[1][0]), 'lt', p[1], p[3])
+
+	# expr <= expr
+def p_exp_le(p):
+	'exp : exp LE exp'
+	p[0] = ((p[1][0]), 'le', p[1], p[3])
+
+	# expr = expr
+def p_exp_eq(p):
+	'exp : exp EQUALS exp'
+	p[0] = ((p[1][0]), 'eq', p[1], p[3])
+
+	# not expr
+def p_exp_not(p):
+	'exp : NOT exp'
+	p[0] = (p.lineno(1), 'not', p[2])
+
 	# ID
 # in p_identifier
 	
-def p_exp_lbrace(p):
-	'exp : LBRACE'
-	p[0] = (p.lineno(1), 'lbrace', p[1])
-	
+#def p_exp_lbrace(p):
+#	'exp : LBRACE'
+#	p[0] = (p.lineno(1), 'lbrace', p[1])
 
 	# integer
 def p_exp_integer(p):
@@ -294,11 +340,16 @@ def print_exp(ast):
 	# ast = (p.lineno(1), 'plus', p[1], p[3])
 	# ast = (p.lineno(1), 'minus', p[1], p[3])
 	# ast = (p.lineno(1), 'integer', p[1])
+	# ast = (p.lineno(1), 'negate', p[2])
+
 	fout.write( str(ast[0]) + "\n" )
-	if ast[1] in ['plus','minus','times','divide']:
+	if ast[1] in ['plus','minus','times','divide','lt','le','eq']:
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
+	elif ast[1] in ['negate','not','isvoid','new']:
+		fout.write(ast[1] + "\n")	
+		print_exp(ast[2])
 	elif ast[1] in ['integer','string']:
 		fout.write(ast[1] + "\n")
 		fout.write(str(ast[2]) + "\n")
