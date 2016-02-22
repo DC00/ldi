@@ -55,7 +55,7 @@ while tokens_lines != []:
 		token_type = get_token_line()
 		token_lexeme = token_type
 		# Update this list
-		if token_type in ['identifier', 'integer', 'type']:
+		if token_type in ['identifier', 'integer', 'type', 'string']:
 				token_lexeme = get_token_line()
 		pa2_tokens = pa2_tokens + \
 						[(line_number, token_type.upper(), token_lexeme)]
@@ -147,9 +147,13 @@ def p_classlist(p):
 
 # class ::= class TYPE [inherits TYPE] { [[feature;]]* }
 
-def p_class_noinherit(p):
-	'class : CLASS type LBRACE featurelist RBRACE'
-	p[0] = (p.lineno(1), 'class_noinherit', p[2], p[4])
+def p_class(p):
+	'''class : CLASS type LBRACE featurelist RBRACE
+			 | CLASS type INHERITS type LBRACE featurelist RBRACE''' 
+	if len(p) == 6:
+		p[0] = (p.lineno(1), 'class_noinherit', p[2], p[4])
+	elif len(p) == 8:
+		p[0] = (p.lineno(1), 'class_inherit', p[2], p[4], p[6])
 
 def p_type(p):
 	'type : TYPE'
@@ -159,24 +163,26 @@ def p_identifier(p):
 	'identifier : IDENTIFIER'
 	p[0] = (p.lineno(1), p[1])
 
-def p_featurelist_none(p):
-	'featurelist : '
-	p[0] = []
-
-def p_featurelist_some(p):
-	'featurelist : feature SEMI featurelist'
-	p[0] = [p[1]] + p[3]
+def p_featurelist(p):
+	'''featurelist : feature SEMI featurelist
+				   | '''
+	if len(p) == 4:
+		p[0] = [p[1]] + p[3]
+	elif len(p) == 1:
+		p[0] = []
 
 # feature ::= ID( [formal [[ formal]]* ]) : TYPE { expr }
-#			| ID : TYPE[ <- expr ]
-# 'attribute_no_init' must match PA3 directions
-def p_feature_attribute_no_init(p):
-	'feature : identifier COLON type'
-	p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 
-def p_feature_attribute_init(p):
-	'feature : identifier COLON type LARROW exp'
-	p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
+
+#			| ID : TYPE[ <- expr ]
+
+def p_feature_no_init(p):
+	'''feature : identifier COLON type LARROW exp
+			   | identifier COLON type'''
+	if len(p) == 6:
+		p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
+	elif len(p) == 4:
+		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 
 # This is the bitch part. All of the expressions
 # p.lineno() only works for things in uppercase letters
@@ -215,7 +221,6 @@ def p_exp_negate(p):
 
 	# ID
 # in p_identifier
-
 	
 def p_exp_lbrace(p):
 	'exp : LBRACE'
@@ -298,7 +303,7 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		fout.write(str(ast[2]) + "\n")
 	elif ast[1] in ['true', 'false']:
-		fout.write(ast[1])
+		fout.write(ast[1] + "\n")
 	else:
 		print "unhandled expression"
 		exit(1)
@@ -319,9 +324,16 @@ def print_feature(ast):
 
 def print_class(ast):
 	# ast = (p.lineno(1), 'class_noinherit', p[2] name, p[4] feature list)
-	print_identifier(ast[2])
-	fout.write("no_inherits\n");
-	print_list(ast[3], print_feature)
+	# ast = (p.lineno(1), 'class_inherit', p[2] name, p[5] superclass_name, p[8] feature list)
+	if ast[1] == 'class_noinherit':
+		print_identifier(ast[2])
+		fout.write("no_inherits\n")
+		print_list(ast[3], print_feature)
+	elif ast[1] == 'class_inherit':
+		print_identifier(ast[2])
+		fout.write("inherits\n")
+		print_identifier(ast[3])
+		print_list(ast[4], print_feature)
 
 def print_program(ast):
 	print_list(ast, print_class)
