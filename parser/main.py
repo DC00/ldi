@@ -1,4 +1,5 @@
 # Daniel Coo (djc4ku)
+# Raymond Zhao (rfz5nt)
 # Parser for PA3 for Cool
 
 # Read in the CL-LEX file
@@ -210,11 +211,10 @@ def p_feature(p):
 		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 	
 
-# p.lineno() only works for things in uppercase letters
-# feature ::= ID ....
 #		| ID : TYPE [ <- expr ]
 
 # formal ::= ID : TYPE
+
 def p_formal(p):
 	'formal : identifier COLON type'	
 	p[0] = (p[1], p[3])
@@ -243,19 +243,19 @@ def p_idlist(p):
 		p[0] = []
 	   
 	
-	
 	# if expr then expr else expr fi
-#def p_expr_if(p):
-#	'exp : IF exp THEN exp ELSE exp FI'	
-#	p[0] = 
+def p_expr_if(p):
+	'exp : IF exp THEN exp ELSE exp FI'	
+	p[0] = (p.lineno(1), 'if', p[2], p[4], p[6])
 
 	# while expr loop expr pool
-#def p_expr_while(p):
-#	'exp : WHILE exp LOOP exp POOL'
-#	p[0] =
+def p_expr_while(p):
+	'exp : WHILE exp LOOP exp POOL'
+	p[0] = (p.lineno(1), 'while', p[2], p[4])
 
 	# { [[ expr; ]]+ }
 	# TODO: double check print method
+
 def p_exp_block(p):
 	'exp : LBRACE explist RBRACE'
 	p[0] = (p.lineno(1), 'block', p[2])
@@ -357,8 +357,6 @@ def p_error(p):
 		print "ERROR: Syntax error at EOF" # FIXME Track line number to output end of file stuff
 
 
-
-
 # Build the PA3 parser from the above rules
 # All methods defining a rule must come
 # above the parser line
@@ -412,7 +410,16 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 	elif ast[1] == 'block':
 		fout.write(ast[1] + "\n")
-		print_list(ast, print_exp)
+		print_list(ast[2], print_exp)
+	elif ast[1] == 'if':
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_exp(ast[3])
+		print_exp(ast[4])
+	elif ast[1] == 'while':
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_exp(ast[3])
 	elif ast[1] == 'self_dispatch':
 	#	ast = (p.lineno(1),'self_dispatch', p[1], p[3])
 		fout.write(ast[1] + "\n")
@@ -474,8 +481,4 @@ def print_program(ast):
 
 print_program(ast)
 fout.close()
-
-
-
-
 
