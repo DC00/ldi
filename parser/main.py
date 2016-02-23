@@ -254,8 +254,6 @@ def p_expr_while(p):
 	p[0] = (p.lineno(1), 'while', p[2], p[4])
 
 	# { [[ expr; ]]+ }
-	# TODO: double check print method
-
 def p_exp_block(p):
 	'exp : LBRACE explist RBRACE'
 	p[0] = (p.lineno(1), 'block', p[2])
@@ -267,6 +265,24 @@ def p_explist(p):
 		p[0] = [p[1]] + p[3]
 	elif len(p) == 3:
 		p[0] = [p[1]] 
+	
+	# case expr of [[ID : TYPE => expr;]]+ esac
+	# TODO: fix case, Parser Error on SEMI line 5 of case_test
+def p_exp_case(p):
+	'exp : CASE exp OF caseelementlist ESAC'
+	p[0] = (p.lineno(1), 'case', p[2], p[4])
+
+def p_caseelementlist(p):
+	'''caseelementlist : caseelement SEMI caseelementlist
+					   | caseelement SEMI'''
+	if len(p) == 4:
+		p[0] = [p[1]] + p[3]
+	elif len(p) == 3:
+		p[0] = [p[1]]
+		
+def p_caseelement(p):
+	'caseelement : identifier COLON type RARROW exp' 
+	p[0] = (p[1], p[3], p[5])
 
 	# new TYPE
 def p_exp_new(p):
@@ -324,6 +340,9 @@ def p_exp_not(p):
 	'exp : NOT exp'
 	p[0] = (p.lineno(1), 'not', p[2])
 
+def p_exp_parenthesis(p):
+	'exp : LPAREN exp RPAREN'
+	p[0] = p[2]
 	# ID
 # in p_identifier
 
@@ -387,6 +406,10 @@ def print_identifier(ast):
 	fout.write( str(ast[0]) + "\n")
 	fout.write(ast[1] + "\n")
 
+def print_case_element(ast):
+	print_identifier(ast[0])
+	print_identifier(ast[1])
+	print_exp(ast[2])
 
 def print_exp(ast):
 	# ast = (p.lineno(1), 'plus', p[1], p[3])
@@ -425,6 +448,10 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_identifier(ast[2])
 		print_list(ast[3],print_exp)
+	elif ast[1] == 'case':
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_list(ast[3],print_case_element)
 	else:
 		print "unhandled expression"
 		exit(1)
