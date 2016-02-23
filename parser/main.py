@@ -100,8 +100,15 @@ tokens = (
 #		there exits 42 shift/reduce conflicts
 
 precedence = (
+	('right', 'LARROW'),	
+	('left', 'NOT'),
+	('nonassoc','LT','LE','EQUALS'),
 	('left', 'PLUS', 'MINUS'),
 	('left', 'TIMES', 'DIVIDE'),
+	('left', 'ISVOID'),
+	('left', 'TILDE'),
+	('left', 'AT'),
+	('left', 'DOT')
 )
 
 
@@ -174,41 +181,92 @@ def p_featurelist(p):
 	elif len(p) == 1:
 		p[0] = []
 
-# feature ::= ID( [formal [[ formal]]* ]) : TYPE { expr }
+# feature ::= ID( [formal [[,formal]]* ]) : TYPE { expr }
+
+def p_feature_method(p):
+	'''feature : identifier LPAREN RPAREN COLON type LBRACE exp RBRACE
+			   | identifier LPAREN formal formallist RPAREN COLON type LBRACE exp RBRACE '''
+	if len(p) == 9:
+		p[0] = (p.lineno(1), p[1], 'method', p[5], p[7])
+	elif len(p) == 11:
+		p[0] = (p.lineno(1), p[1], 'method', p[3], p[4], p[7], p[9])
+
+def p_formallist(p):
+	'''formallist : COMMA formal formallist
+				| '''
+	if len(p) == 4:
+		p[0] = [p[2]] + p[3]
+	elif len(p) == 1:
+		p[0] = []
 
 #			| ID : TYPE[ <- expr ]
 
-def p_feature_no_init(p):
+def p_feature(p):
 	'''feature : identifier COLON type LARROW exp
 			   | identifier COLON type'''
 	if len(p) == 6:
 		p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
 	elif len(p) == 4:
 		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
+	
 
 # p.lineno() only works for things in uppercase letters
 # feature ::= ID ....
 #		| ID : TYPE [ <- expr ]
 
 # formal ::= ID : TYPE
+def p_formal(p):
+	'formal : identifier COLON type'	
+	p[0] = (p[1], p[3])
 
 # expr ::= ...
+
+	# ID ( [expr [[,expr]]*] )
+def p_exp_self_dispatch(p):
+	'exp : identifier LPAREN idexpr RPAREN'
+	p[0] = (p[1][0],'self_dispatch', p[1], p[3])
+
+def p_idexpr(p):
+	'''idexpr : exp idlist
+			  | '''
+	if len(p) == 3:
+		p[0] = [p[1]] + p[2]	
+	elif len(p) == 1:
+		p[0] = []
+
+def p_idlist(p):
+	'''idlist : COMMA exp idlist
+			  | '''
+	if len(p) == 4:
+		p[0] = [p[2]] + p[3]
+	elif len(p) == 1:
+		p[0] = []
+	   
 	
-	# TODO: need to implement print method
-	# FIXME: causes YaccError: Unable to build parser
+	
+	# if expr then expr else expr fi
+#def p_expr_if(p):
+#	'exp : IF exp THEN exp ELSE exp FI'	
+#	p[0] = 
+
+	# while expr loop expr pool
+#def p_expr_while(p):
+#	'exp : WHILE exp LOOP exp POOL'
+#	p[0] =
 
 	# { [[ expr; ]]+ }
-#def p_exp_block(p):
-#	'exp : LBRACE explist RBRACE'
-#	p[0] = (p.lineno(1), 'block', p[2])
+	# TODO: double check print method
+def p_exp_block(p):
+	'exp : LBRACE explist RBRACE'
+	p[0] = (p.lineno(1), 'block', p[2])
 
-#def p_explist(p):
-#	'''explist : exp SEMI explist
-#			   : exp SEMI'''
-#	if len(p) == 4:
-#		p[0] = [p[1]] + p[3]
-#	elif len(p) == 3:
-#		p[0] = [p[1]] 
+def p_explist(p):
+	'''explist : exp SEMI explist
+			   | exp SEMI'''
+	if len(p) == 4:
+		p[0] = [p[1]] + p[3]
+	elif len(p) == 3:
+		p[0] = [p[1]] 
 
 	# new TYPE
 def p_exp_new(p):
@@ -268,10 +326,6 @@ def p_exp_not(p):
 
 	# ID
 # in p_identifier
-	
-#def p_exp_lbrace(p):
-#	'exp : LBRACE'
-#	p[0] = (p.lineno(1), 'lbrace', p[1])
 
 	# integer
 def p_exp_integer(p):
@@ -341,6 +395,7 @@ def print_exp(ast):
 	# ast = (p.lineno(1), 'minus', p[1], p[3])
 	# ast = (p.lineno(1), 'integer', p[1])
 	# ast = (p.lineno(1), 'negate', p[2])
+	# ast = (p.lineno(1), 'block', p[2] exp-list)
 
 	fout.write( str(ast[0]) + "\n" )
 	if ast[1] in ['plus','minus','times','divide','lt','le','eq']:
@@ -355,6 +410,14 @@ def print_exp(ast):
 		fout.write(str(ast[2]) + "\n")
 	elif ast[1] in ['true', 'false']:
 		fout.write(ast[1] + "\n")
+	elif ast[1] == 'block':
+		fout.write(ast[1] + "\n")
+		print_list(ast, print_exp)
+	elif ast[1] == 'self_dispatch':
+	#	ast = (p.lineno(1),'self_dispatch', p[1], p[3])
+		fout.write(ast[1] + "\n")
+		print_identifier(ast[2])
+		print_list(ast[3],print_exp)
 	else:
 		print "unhandled expression"
 		exit(1)
@@ -372,6 +435,26 @@ def print_feature(ast):
 		print_identifier(ast[2])
 		print_identifier(ast[3])
 		print_exp(ast[4])
+	elif ast[2] == 'method' and len(ast) == 5:
+		# without formal list
+		fout.write('method' + '\n')
+		print_identifier(ast[1])
+		fout.write('0' + '\n')
+		print_identifier(ast[3])
+		print_exp(ast[4])
+	elif ast[2] == 'method' and len(ast) == 7:
+		# with formal list
+		fout.write('method' + '\n')
+		print_identifier(ast[2])
+		ast[4] = [ast[3]] + ast[4]
+		print_list(ast[4], print_formal)
+		print_identifier(ast[5])
+		print_exp(ast[6])
+
+def print_formal(ast):
+	# ast = (p[1] identifier, p[3] type)
+	print_identifier(ast[0])
+	print_identifier(ast[1])
 
 def print_class(ast):
 	# ast = (p.lineno(1), 'class_noinherit', p[2] name, p[4] feature list)
