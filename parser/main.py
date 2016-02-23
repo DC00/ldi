@@ -97,8 +97,6 @@ tokens = (
 )
 
 # Decide which binds more tightly
-# TODO: add in precedence for lt, gt, eq, etc.
-#		there exits 42 shift/reduce conflicts
 
 precedence = (
 	('right', 'LARROW'),	
@@ -209,7 +207,6 @@ def p_feature(p):
 		p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
 	elif len(p) == 4:
 		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
-	
 
 #		| ID : TYPE [ <- expr ]
 
@@ -220,6 +217,10 @@ def p_formal(p):
 	p[0] = (p[1], p[3])
 
 # expr ::= ...
+	# ID <- exp
+def p_exp_assign
+	'exp : identifier LARROW exp'
+	p[0] = (p.lineno(1), 'assign', p[1], p[3])
 
 	# ID ( [expr [[,expr]]*] )
 def p_exp_self_dispatch(p):
@@ -267,7 +268,8 @@ def p_explist(p):
 		p[0] = [p[1]] 
 	
 	# case expr of [[ID : TYPE => expr;]]+ esac
-	# TODO: fix case, Parser Error on SEMI line 5 of case_test
+	# TODO: not printing out the entire caseelement list
+
 def p_exp_case(p):
 	'exp : CASE exp OF caseelementlist ESAC'
 	p[0] = (p.lineno(1), 'case', p[2], p[4])
@@ -343,8 +345,11 @@ def p_exp_not(p):
 def p_exp_parenthesis(p):
 	'exp : LPAREN exp RPAREN'
 	p[0] = p[2]
+
 	# ID
-# in p_identifier
+def p_exp_identifier(p):
+	'exp : identifier'
+	p[0] = (p.lineno(1), 'identifier', p[1])
 
 	# integer
 def p_exp_integer(p):
@@ -423,7 +428,7 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_exp(ast[3])
-	elif ast[1] in ['negate','not','isvoid','new']:
+	elif ast[1] in ['negate','not','isvoid']:
 		fout.write(ast[1] + "\n")	
 		print_exp(ast[2])
 	elif ast[1] in ['integer','string']:
@@ -448,10 +453,20 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_identifier(ast[2])
 		print_list(ast[3],print_exp)
+	elif ast[1] == 'new':
+		fout.write(ast[1] + "\n")	
+		print_identifier(ast[2])
 	elif ast[1] == 'case':
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_list(ast[3],print_case_element)
+	elif ast[1] == 'identifier':
+		fout.write(ast[1] + "\n")
+		print_identifer(ast[2])
+	elif ast[1] == 'assign':
+		fout.write(ast[1] + "\n")
+		print_identifier(ast[2])
+		print_exp(ast[3])
 	else:
 		print "unhandled expression"
 		exit(1)
