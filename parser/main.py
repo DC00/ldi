@@ -217,10 +217,40 @@ def p_formal(p):
 	p[0] = (p[1], p[3])
 
 # expr ::= ...
+
 	# ID <- exp
-def p_exp_assign
+def p_exp_assign(p):
 	'exp : identifier LARROW exp'
-	p[0] = (p.lineno(1), 'assign', p[1], p[3])
+	p[0] = (p[1][0], 'assign', p[1], p[3])
+	
+	# expr [@TYPE].ID ( [expr [[,expr]]* ] )
+
+def p_exp_dispatch(p):
+	'''exp : exp AT type DOT identifier LPAREN ddlist RPAREN
+		   | exp DOT identifier LPAREN ddlist RPAREN'''
+	if len(p) == 9:
+		p[0] = (p.lineno(1), 'static_dispatch', p[1], p[3], p[5], p[7]) 
+	elif len(p) == 7:
+		p[0] = (p[1][0], 'dynamic_dispatch', p[1], p[3], p[5])	
+
+def p_ddlist(p):	
+	'''ddlist : exp ddelem
+			  | '''
+	if len(p) == 3:
+		if p[2] is None:
+			p[0] = [p[1]]
+		else:
+			p[0] = [p[1]] + p[2]
+	elif len(p) == 1:
+		p[0] = []
+
+def p_ddelem(p):
+	'''ddelem : COMMA exp ddelem
+			  | '''
+	if len(p) == 3:
+		p[0] = [p[2]] + p[3]	
+	elif len(p) == 1:
+		p[0] = []
 
 	# ID ( [expr [[,expr]]*] )
 def p_exp_self_dispatch(p):
@@ -242,7 +272,6 @@ def p_idlist(p):
 		p[0] = [p[2]] + p[3]
 	elif len(p) == 1:
 		p[0] = []
-	   
 	
 	# if expr then expr else expr fi
 def p_expr_if(p):
@@ -266,10 +295,31 @@ def p_explist(p):
 		p[0] = [p[1]] + p[3]
 	elif len(p) == 3:
 		p[0] = [p[1]] 
+
+	# let ID: TYPE [<- expr] [[, ID : TYPE [<- expr]]]* in expr
+def p_exp_let(p):
+	'exp : LET binding bindinglist IN exp'
+	p[0] = (p.lineno(1), 'let', p[2], p[3], p[5])
+
+def p_bindinglist(p):
+	'''bindinglist : COMMA binding bindinglist
+				   | '''
+	if len(p) == 4:
+		p[0] = [p[2]] + p[3]
+	elif len(p) == 1:
+		p[0] = [] 
+
+def p_binding(p):
+	'''binding : identifier COLON type
+			   | identifier COLON type LARROW exp'''
+	if len(p) == 4:
+		p[0] = ('let_binding_no_init', p[1], p[3])
+	elif len(p) == 6:
+		p[0] = ('let_binding_init', p[1], p[3], p[5])
+
+
 	
 	# case expr of [[ID : TYPE => expr;]]+ esac
-	# TODO: not printing out the entire caseelement list
-
 def p_exp_case(p):
 	'exp : CASE exp OF caseelementlist ESAC'
 	p[0] = (p.lineno(1), 'case', p[2], p[4])
@@ -349,7 +399,7 @@ def p_exp_parenthesis(p):
 	# ID
 def p_exp_identifier(p):
 	'exp : identifier'
-	p[0] = (p.lineno(1), 'identifier', p[1])
+	p[0] = (p[1][0], 'identifier', p[1])
 
 	# integer
 def p_exp_integer(p):
@@ -416,6 +466,17 @@ def print_case_element(ast):
 	print_identifier(ast[1])
 	print_exp(ast[2])
 
+def print_binding(ast):
+	if ast[0] == 'let_binding_no_init':
+		fout.write(ast[0] + "\n")
+		print_identifier(ast[1])
+		print_identifier(ast[2])
+	elif ast[0] == 'let_binding_init':
+		fout.write(ast[0] + "\n")
+		print_identifier(ast[1])
+		print_identifier(ast[2])
+		print_exp(ast[3])
+
 def print_exp(ast):
 	# ast = (p.lineno(1), 'plus', p[1], p[3])
 	# ast = (p.lineno(1), 'minus', p[1], p[3])
@@ -460,13 +521,28 @@ def print_exp(ast):
 		fout.write(ast[1] + "\n")
 		print_exp(ast[2])
 		print_list(ast[3],print_case_element)
+	elif ast[1] == 'let':
+		fout.write(ast[1] + "\n")
+		print_list([ast[2]] + ast[3],print_binding)
+		print_exp(ast[4])
 	elif ast[1] == 'identifier':
 		fout.write(ast[1] + "\n")
-		print_identifer(ast[2])
+		print_identifier(ast[2])
 	elif ast[1] == 'assign':
 		fout.write(ast[1] + "\n")
 		print_identifier(ast[2])
 		print_exp(ast[3])
+	elif ast[1] == 'static_dispatch':
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_identifier(ast[3])
+		print_identifier(ast[4])
+		print_list(ast[5],print_exp)
+	elif ast[1] == 'dynamic_dispatch':
+		fout.write(ast[1] + "\n")
+		print_exp(ast[2])
+		print_identifier(ast[3])
+		print_list(ast[4],print_exp)
 	else:
 		print "unhandled expression"
 		exit(1)
@@ -495,8 +571,7 @@ def print_feature(ast):
 		# with formal list
 		fout.write('method' + '\n')
 		print_identifier(ast[2])
-		ast[4] = [ast[3]] + ast[4]
-		print_list(ast[4], print_formal)
+		print_list([ast[3]] + ast[4], print_formal)
 		print_identifier(ast[5])
 		print_exp(ast[6])
 
