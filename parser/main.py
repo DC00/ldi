@@ -229,7 +229,7 @@ def p_exp_dispatch(p):
 	'''exp : exp AT type DOT identifier LPAREN ddlist RPAREN
 		   | exp DOT identifier LPAREN ddlist RPAREN'''
 	if len(p) == 9:
-		p[0] = (p.lineno(1), 'static_dispatch', p[1], p[3], p[5], p[7]) 
+		p[0] = (p[1][0], 'static_dispatch', p[1], p[3], p[5], p[7]) 
 	elif len(p) == 7:
 		p[0] = (p[1][0], 'dynamic_dispatch', p[1], p[3], p[5])	
 
@@ -247,7 +247,7 @@ def p_ddlist(p):
 def p_ddelem(p):
 	'''ddelem : COMMA exp ddelem
 			  | '''
-	if len(p) == 3:
+	if len(p) == 4:
 		p[0] = [p[2]] + p[3]	
 	elif len(p) == 1:
 		p[0] = []
@@ -458,7 +458,7 @@ def print_list(ast, print_element_function): # higher-order function
 def print_identifier(ast):
 	# ast = (p.lineno(1), p[1])
 	# ast[1] = identifier string
-	fout.write( str(ast[0]) + "\n")
+	fout.write(str(ast[0]) + "\n")
 	fout.write(ast[1] + "\n")
 
 def print_case_element(ast):
@@ -570,7 +570,7 @@ def print_feature(ast):
 	elif ast[2] == 'method' and len(ast) == 7:
 		# with formal list
 		fout.write('method' + '\n')
-		print_identifier(ast[2])
+		print_identifier(ast[1])
 		print_list([ast[3]] + ast[4], print_formal)
 		print_identifier(ast[5])
 		print_exp(ast[6])
