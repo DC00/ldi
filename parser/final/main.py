@@ -96,8 +96,6 @@ tokens = (
 	'TILDE', 'TIMES', 'TRUE', 'TYPE', 'WHILE',
 )
 
-# Decide which binds more tightly
-
 precedence = (
 	('right', 'LARROW'),	
 	('left', 'NOT'),
@@ -207,8 +205,6 @@ def p_feature(p):
 		p[0] = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
 	elif len(p) == 4:
 		p[0] = (p.lineno(1), 'attribute_no_init', p[1], p[3])
-
-#		| ID : TYPE [ <- expr ]
 
 # formal ::= ID : TYPE
 
@@ -456,8 +452,6 @@ def print_list(ast, print_element_function): # higher-order function
 		print_element_function(elem)
 
 def print_identifier(ast):
-	# ast = (p.lineno(1), p[1])
-	# ast[1] = identifier string
 	fout.write(str(ast[0]) + "\n")
 	fout.write(ast[1] + "\n")
 
@@ -478,12 +472,6 @@ def print_binding(ast):
 		print_exp(ast[3])
 
 def print_exp(ast):
-	# ast = (p.lineno(1), 'plus', p[1], p[3])
-	# ast = (p.lineno(1), 'minus', p[1], p[3])
-	# ast = (p.lineno(1), 'integer', p[1])
-	# ast = (p.lineno(1), 'negate', p[2])
-	# ast = (p.lineno(1), 'block', p[2] exp-list)
-
 	fout.write( str(ast[0]) + "\n" )
 	if ast[1] in ['plus','minus','times','divide','lt','le','eq']:
 		fout.write(ast[1] + "\n")
@@ -510,7 +498,6 @@ def print_exp(ast):
 		print_exp(ast[2])
 		print_exp(ast[3])
 	elif ast[1] == 'self_dispatch':
-	#	ast = (p.lineno(1),'self_dispatch', p[1], p[3])
 		fout.write(ast[1] + "\n")
 		print_identifier(ast[2])
 		print_list(ast[3],print_exp)
@@ -549,13 +536,11 @@ def print_exp(ast):
 
 
 def print_feature(ast):
-	# ast = (p.lineno(1), 'attribute_no_init', p[1], p[3])
 	if ast[1] == 'attribute_no_init':
 		fout.write("attribute_no_init\n")
 		print_identifier(ast[2])
 		print_identifier(ast[3])
 	elif ast[1] == 'attribute_init':
-		# ast = (p.lineno(1), 'attribute_init', p[1], p[3], p[5])
 		fout.write("attribute_init\n")
 		print_identifier(ast[2])
 		print_identifier(ast[3])
@@ -576,13 +561,10 @@ def print_feature(ast):
 		print_exp(ast[6])
 
 def print_formal(ast):
-	# ast = (p[1] identifier, p[3] type)
 	print_identifier(ast[0])
 	print_identifier(ast[1])
 
 def print_class(ast):
-	# ast = (p.lineno(1), 'class_noinherit', p[2] name, p[4] feature list)
-	# ast = (p.lineno(1), 'class_inherit', p[2] name, p[5] superclass_name, p[8] feature list)
 	if ast[1] == 'class_noinherit':
 		print_identifier(ast[2])
 		fout.write("no_inherits\n")
