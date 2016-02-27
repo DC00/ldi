@@ -1,3 +1,4 @@
-for i in [0-9]*.cl-type ; do
-  rm `basename $i .cl-type`.* ;
-done
+#!/bin/bash
+rm *.cl-lex
+rm *.cl-type
+rm [0-9]*.cl
