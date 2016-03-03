@@ -141,15 +141,22 @@ let main () = begin
 
 	(* CLASS MAP *)
 
-		(* build inheritance graph and toposort it *)
+		(* build inheritance graph*)
 	
 	let inheritance_tbl = Hashtbl.create 100 in
-	List.iter (fun (cname,inherits,_) ->
+	List.iter (fun ((_,cname),inherits,_) ->
 		match inherits with
 			| None -> ()
-			| Some parentname ->
-				Hashtbl.add inheritance_tbl cname parentname	
+			| Some (_,parentname) -> begin
+				Hashtbl.add inheritance_tbl cname parentname ;
+			end
 	) ast ;
+	
+	Hashtbl.iter (fun key value ->
+		printf "KEY : %s\n" key ;
+		printf "	VAL : %s\n" value ;
+	) inheritance_tbl ;
+		(* toposort and find cycles, if cycle exists, output error *)
 	
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
@@ -180,10 +187,35 @@ let main () = begin
 				*)
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				let final_features = ref [] in 
+				(* FIXME: if a class doesn't inherit from anything, 
+							then attributes will be empty *)
+
+				let rec find_parents (inherits) =
+					try
+						(* printf "FIND: %s\n" inherits ; *)
+						let new_inherits = Hashtbl.find inheritance_tbl inherits in
+						find_parents(new_inherits) @ [ inherits ] ;
+					with Not_found ->
+						[ inherits ]
+				in
+				
+				let inheritance_list = match inherits with
+					| Some (_,inherits) -> 
+						find_parents inherits @ [ cname ]
+					| None -> []
+				in
+
+				List.iter (fun cname ->
+					let _,_,feature_list = List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+					final_features := !final_features @ feature_list
+				) inheritance_list ;
+
 				List.filter (fun feature -> match feature with
 					| Attribute _ -> true
 					| Method _ -> false
-				) features
+				) !final_features
+
 			with Not_found -> 
 				[]
 		in
