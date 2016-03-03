@@ -156,6 +156,7 @@ let main () = begin
 		printf "KEY : %s\n" key ;
 		printf "	VAL : %s\n" value ;
 	) inheritance_tbl ;
+
 		(* toposort and find cycles, if cycle exists, output error *)
 	
 
@@ -188,8 +189,6 @@ let main () = begin
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
 				let final_features = ref [] in 
-				(* FIXME: if a class doesn't inherit from anything, 
-							then attributes will be empty *)
 
 				let rec find_parents (inherits) =
 					try
@@ -203,8 +202,14 @@ let main () = begin
 				let inheritance_list = match inherits with
 					| Some (_,inherits) -> 
 						find_parents inherits @ [ cname ]
-					| None -> []
+					| None -> [ cname ]
 				in
+
+				printf "Class: %s\n" cname ;
+
+				List.iter (fun name ->
+					printf "INHERITANCE: %s\n" name
+				) inheritance_list ;
 
 				List.iter (fun cname ->
 					let _,_,feature_list = List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
