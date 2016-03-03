@@ -7,5 +7,5 @@ if [[ -e main.ml ]] ; then
   cool --parse $TEST_FILE
   ./main.exe $TEST_FILE-ast
   diff -b -B -E -w ref_$TEST_FILE-type $TEST_FILE-type
-  vimdiff $TEST_FILE-type ref_$TEST_FILE-type
+  vimdiff ref_$TEST_FILE-type $TEST_FILE-type
 fi 
