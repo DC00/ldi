@@ -18,12 +18,12 @@ and feature =
 and formal = id * cool_type
 and exp = loc * exp_kind
 and exp_kind = 
-	| Integer of string (* look @ loc *)
+	| Integer of string (* look @ comment for loc *)
 
 let main () = begin
-	
+(*	
 	printf "started main() \n" ;
-
+*)
 	(* De-serialize the CL-AST File *)
 
 	let fname = Sys.argv.(1) in
@@ -40,7 +40,7 @@ let main () = begin
 	
 	let read_list worker =
 		let k = int_of_string (read ()) in
-		printf "read_list of %d\n" k ;
+		(*printf "read_list of %d\n" k ; *)
 		let lst = range k in
 		List.map (fun _ -> worker ()) lst
 	in		
@@ -107,7 +107,7 @@ let main () = begin
 	
 	let ast = read_cool_program () in
 	close_in fin ;
-	printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;
+	(*printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;*)
 
 	(* Check for Class-Related Errors (look at PA4) *)
 
@@ -126,6 +126,16 @@ let main () = begin
 		| None -> ()
 		| Some(iloc,iname) -> (* inherited type identifier *)
 			if iname = "Int" then begin
+				printf "ERROR: %s: Type-Check: inheriting from forbidden class %s\n"
+					iloc iname ;
+				exit 1
+			end ;
+			if iname = "Bool" then begin
+				printf "ERROR: %s: Type-Check: inheriting from forbidden class %s\n"
+					iloc iname ;
+				exit 1
+			end ;
+			if iname = "String" then begin
 				printf "ERROR: %s: Type-Check: inheriting from forbidden class %s\n"
 					iloc iname ;
 				exit 1
@@ -151,13 +161,10 @@ let main () = begin
 				Hashtbl.add inheritance_tbl cname parentname ;
 			end
 	) ast ;
-	
-	Hashtbl.iter (fun key value ->
-		printf "KEY : %s\n" key ;
-		printf "	VAL : %s\n" value ;
-	) inheritance_tbl ;
 
 		(* toposort and find cycles, if cycle exists, output error *)
+	
+
 	
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
@@ -173,19 +180,7 @@ let main () = begin
 	List.iter (fun cname -> 
 		(* name of class, # attrs, each attr=feature in turn *)
 		fprintf fout "%s\n" cname ;
-		let attributes = (* THIS IS INCOMPLETE - NEED TO FIND INHERITED ATTRIBUTES *)
-				(* 
-					1) construct mapping from child to parent
-						1a) use TOPOSORT here to find the right order of traversal
-					2) recurisively walk up that mapping until we hit object
-					3) add in all of the attributes we find
-						3a) look for attribute override problems
-				------------------------------------------------------------------
-					1) build hashtbl for inheritance (key: child, value: parent)
-					2) find all the attributes through inheritance by looking at the values
-					3) look at attr in parent and add them in feature list
-					4) toposort for cycles
-				*)
+		let attributes =
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
 				let final_features = ref [] in 
@@ -205,15 +200,12 @@ let main () = begin
 					| None -> [ cname ]
 				in
 
-				printf "Class: %s\n" cname ;
-
-				List.iter (fun name ->
-					printf "INHERITANCE: %s\n" name
-				) inheritance_list ;
-
 				List.iter (fun cname ->
-					let _,_,feature_list = List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
-					final_features := !final_features @ feature_list
+					List.iter (fun ((_,cname2),_,feature_list) ->
+						if cname = cname2 then
+						final_features := !final_features @ feature_list ;
+					) ast
+					
 				) inheritance_list ;
 
 				List.filter (fun feature -> match feature with
