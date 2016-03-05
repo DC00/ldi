@@ -1,5 +1,5 @@
 (* Raymond Zhao rfz5nt
-   Daniel Coo djc4ku 
+   Daniel Coo djc4ku
    PA4 - Type Checker *)
 
 open Printf
@@ -11,17 +11,27 @@ and loc = string (* these are ints but we have to put string since we are readin
 and id = loc * string
 and cool_type = id
 and cool_class = id * (id option) * feature list
-and feature = 
+and feature =
 	| Attribute of id * cool_type * (exp option)
 		(* option takes care of noinit or init*)
 	| Method of id * (formal list) * cool_type * exp
 and formal = id * cool_type
 and exp = loc * exp_kind
-and exp_kind = 
+and exp_kind =
 	| Integer of string (* look @ comment for loc *)
 
+(* Check to see if features are equal *)
+let features_equal f1 f2 =
+  match (f1, f2) with
+  | Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
+      let loc1, name1 = id in
+      let loc2, name2 = id2 in
+      name1 = name2
+  (* Can check for method overrides here too *)
+  | _,_ -> false
+
 let main () = begin
-(*	
+(*
 	printf "started main() \n" ;
 *)
 	(* De-serialize the CL-AST File *)
@@ -33,17 +43,17 @@ let main () = begin
 		input_line fin (* FIXME: think about \r\n*)
 	in
 
-	let rec range k = 
+	let rec range k =
 		if k <= 0 then []
 		else k :: (range(k-1))
 	in
-	
+
 	let read_list worker =
 		let k = int_of_string (read ()) in
 		(*printf "read_list of %d\n" k ; *)
 		let lst = range k in
 		List.map (fun _ -> worker ()) lst
-	in		
+  in
 
 	(* many mutually-recursive procedures to read in CL_AST file *)
 
@@ -66,7 +76,7 @@ let main () = begin
 		in
 		let features = read_list read_feature in
 		(cname, inherits, features)
-	
+
 	and read_feature () =
 		match read() with
 			| "attribute_no_init" ->
@@ -91,7 +101,7 @@ let main () = begin
 		let ftype = read_id () in
 		(fname,ftype)
 
-	and read_exp () = 
+	and read_exp () =
 		let eloc = read () in
 		let ekind = match read() with
 			|"integer" ->
@@ -100,11 +110,11 @@ let main () = begin
 		| x -> (* FIXME: do all of the others *)
 			failwith ("expression kind unhandled: " ^ x)
 		in
-		
+
 		(eloc,ekind)
 
 	in
-	
+
 	let ast = read_cool_program () in
 	close_in fin ;
 	(*printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;*)
@@ -146,13 +156,13 @@ let main () = begin
 				exit 1
 			end ;
 	) ast ;
-				
+
 	(* IF NO ERRORS *)
 
 	(* CLASS MAP *)
 
 		(* build inheritance graph*)
-	
+
 	let inheritance_tbl = Hashtbl.create 100 in
 	List.iter (fun ((_,cname),inherits,_) ->
 		match inherits with
@@ -163,9 +173,9 @@ let main () = begin
 	) ast ;
 
 		(* toposort and find cycles, if cycle exists, output error *)
-	
 
-	
+
+
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
@@ -175,15 +185,15 @@ let main () = begin
 		match ekind with
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
 	in
-	
+
 	fprintf fout "class_map\n%d\n" (List.length all_classes) ;
-	List.iter (fun cname -> 
+	List.iter (fun cname ->
 		(* name of class, # attrs, each attr=feature in turn *)
 		fprintf fout "%s\n" cname ;
 		let attributes =
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
-				let final_features = ref [] in 
+				let final_features = ref [] in
 
 				let rec find_parents (inherits) =
 					try
@@ -193,9 +203,9 @@ let main () = begin
 					with Not_found ->
 						[ inherits ]
 				in
-				
+
 				let inheritance_list = match inherits with
-					| Some (_,inherits) -> 
+					| Some (_,inherits) ->
 						find_parents inherits @ [ cname ]
 					| None -> [ cname ]
 				in
@@ -203,9 +213,25 @@ let main () = begin
 				List.iter (fun cname ->
 					List.iter (fun ((_,cname2),_,feature_list) ->
 						if cname = cname2 then
+
+
+              (* TODO: Determine if feature in featurelist that shares
+               * name with feature in final_featuers
+               * Need to format the error message*)
+              List.iter (fun (feature) ->
+                List.iter (fun (feature2) ->
+                  if features_equal feature feature2 then begin
+                    (* printf "ERROR: %s: Type-Check: class %s redefines attribute %s"
+                    cname feature ; *)
+                    printf "ERROR: class _ redefines attribute _\n" ;
+                    exit(1) ;
+                  end
+                ) !final_features ;
+              ) feature_list ;
+
+
 						final_features := !final_features @ feature_list ;
 					) ast
-					
 				) inheritance_list ;
 
 				List.filter (fun feature -> match feature with
@@ -213,14 +239,14 @@ let main () = begin
 					| Method _ -> false
 				) !final_features
 
-			with Not_found -> 
+			with Not_found ->
 				[]
 		in
 		fprintf fout "%d\n" (List.length attributes) ;
 		List.iter (fun attr -> match attr with
 			| Attribute((_,aname),(_,atype),None) ->
 				fprintf fout "no_initializer\n%s\n%s\n" aname atype
-			| Attribute((_,aname),(_,atype),(Some init)) -> 
+			| Attribute((_,aname),(_,atype),(Some init)) ->
 				fprintf fout "initializer\n%s\n%s\n" aname atype ;
 				output_exp init
 			| Method _ -> failwith "method unexpected"
