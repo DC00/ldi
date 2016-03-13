@@ -18,7 +18,13 @@ and feature =
 and formal = id * cool_type
 and exp = loc * exp_kind
 and exp_kind =
-	| Integer of string (* look @ comment for loc *)
+	| Assign of id * exp
+	| Integer of string
+	| Self_Dispatch of id * (exp list)
+	| Block of (exp list)
+	| String of string
+	| Identifier of id
+(* TODO: all expressions *)
 
 (* Check to see if features are equal *)
 let features_equal f1 f2 =
@@ -26,7 +32,9 @@ let features_equal f1 f2 =
 		| Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
       		let loc1, name1 = id in
       		let loc2, name2 = id2 in
-      		name1 = name2
+			if name1 = name2 then
+            	printf "ERROR: %s: Type-Check: class redefines attribute %s\n" loc2 name1 ;
+      			name1 = name2
   (* Can check for method overrides here too *)
   		| _,_ -> false
 
@@ -102,12 +110,30 @@ let main () = begin
 		(fname,ftype)
 
 	and read_exp () =
-		let eloc = read () in
+		let eloc = read() in
 		let ekind = match read() with
+			|"assign" ->
+				let var = read_id() in
+				let rhs = read_exp() in
+				Assign(var,rhs)
 			|"integer" ->
-				let ival = read () in
+				let ival = read() in
 				Integer(ival)
-		| x -> (* FIXME: do all of the others *)
+			| "self_dispatch" ->
+				let mname = read_id() in
+				let exps = read_list read_exp in
+				Self_Dispatch(mname,exps)
+			| "block" ->
+				let exps = read_list read_exp in
+				Block(exps)
+			| "string" ->
+				let act_string = read() in
+				String(act_string)
+			| "identifier" ->
+				let act_id = read_id() in
+				Identifier(act_id)
+
+		| x -> (* TODO: do all of the others *)
 			failwith ("expression kind unhandled: " ^ x)
 		in
 
@@ -183,7 +209,13 @@ let main () = begin
 	let rec output_exp (eloc, ekind) =
 		fprintf fout "%s\n" eloc ;
 		match ekind with
+			| Assign(var,rhs) -> ()
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
+			| Self_Dispatch(mname, exps) -> () 
+			| Block(exps) -> ()
+			| String(act_string) -> ()
+			| Identifier(act_id) -> ()
+			(* TODO: DO ALL FOR EXPRESSIONS *)
 	in
 
 	fprintf fout "class_map\n%d\n" (List.length all_classes) ;
@@ -218,17 +250,13 @@ let main () = begin
 					List.iter (fun ((_,cname4),_,feature_list) ->
 						if cname3 = cname4 then
 							final_features := !final_features @ feature_list ;
-
 			
-              (* TODO: Determine if feature in featurelist that shares
-               * name with feature in final_featuers
-               * Need to format the error message*)
+              (* TODO:Need to format the error message *)
+
 			   			if cname <> cname4 then begin		
               				List.iter (fun (feature) ->
                 				List.iter (fun (feature2) ->
                   					if features_equal feature feature2 then begin
-                    					(* printf "ERROR: %s: Type-Check: class %s redefines attribute %s" cname feature ; *)
-                    					printf "ERROR: class _ redefines attribute _\n" ;
                     					exit(1) ;
                   					end
                 				) features ;
