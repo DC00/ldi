@@ -16,9 +16,35 @@ and feature =
 		(* option takes care of noinit or init*)
 	| Method of id * (formal list) * cool_type * exp
 and formal = id * cool_type
+and case_element = id * cool_type * exp
+and binding = id * id * (exp option)
 and exp = loc * exp_kind
 and exp_kind =
-	| Integer of string (* look @ comment for loc *)
+	| Assign of id * exp
+	| Dynamic_Dispatch of exp * id * (exp list)
+	| Static_Dispatch of exp * id * id * (exp list)
+	| Self_Dispatch of id * (exp list)
+	| If of exp * exp * exp
+	| While of exp * exp
+	| Block of (exp list)
+	| New of id
+	| Isvoid of exp
+	| Plus of exp * exp
+	| Minus of exp * exp
+	| Times of exp * exp
+	| Divide of exp * exp
+	| Lt of exp * exp
+	| Le of exp * exp
+	| Eq of exp * exp
+	| Not of exp
+	| Negate of exp
+	| Integer of string
+	| String of string
+	| Identifier of id
+	| Case of exp * (case_element list)
+	| Let of (binding list)
+
+(* TODO: all expressions *)
 
 (* Check to see if features are equal *)
 let features_equal f1 f2 =
@@ -26,7 +52,9 @@ let features_equal f1 f2 =
 		| Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
       		let loc1, name1 = id in
       		let loc2, name2 = id2 in
-      		name1 = name2
+			if name1 = name2 then
+            	printf "ERROR: %s: Type-Check: class redefines attribute %s\n" loc2 name1 ;
+      			name1 = name2
   (* Can check for method overrides here too *)
   		| _,_ -> false
 
@@ -65,14 +93,14 @@ let main () = begin
 		let name = read () in
 		(loc, name)
 
-	and read_cool_class () = (* CLASS *)
+	and read_cool_class () =
 		let cname = read_id () in
 		let inherits = match read() with
 			|"no_inherits" -> None
 			|"inherits" ->
 				let super = read_id () in
 				Some(super)
-			| x -> failwith ("cannot happen: " ^ x)
+			| x -> failwith ("cool_class: cannot happen: " ^ x)
 		in
 		let features = read_list read_feature in
 		(cname, inherits, features)
@@ -94,20 +122,124 @@ let main () = begin
 				let mtype = read_id () in
 				let mbody = read_exp () in
 				Method(mname,formals,mtype,mbody)
-			| x -> failwith ("cannot happen: " ^ x)
+			| x -> failwith ("read_feature: cannot happen: " ^ x)
 
 	and read_formal () =
 		let fname = read_id() in
 		let ftype = read_id () in
 		(fname,ftype)
+	
+	and read_case_element() =
+		let var = read_id() in
+		let ctype = read_id() in
+		let body = read_exp() in
+		(var,ctype,body)
+	
+	and read_binding() =
+		match read() with
+			| "let_binding_no_init" ->
+				let var = read_id() in
+				let typeid = read_id() in
+				(var,typeid, None)
+			| "let_binding_init" ->
+				let var = read_id() in
+				let typeid = read_id() in
+				let idvalue = read_exp() in
+				(var,typeid,(Some idvalue))
+			| x -> failwith ("binding doesn't exist: " ^ x)
 
 	and read_exp () =
-		let eloc = read () in
+		let eloc = read() in
 		let ekind = match read() with
+			|"assign" ->
+				let var = read_id() in
+				let rhs = read_exp() in
+				Assign(var,rhs)
+			| "dynamic_dispatch" ->
+				let e = read_exp() in
+				let methodid = read_id() in
+				let args = read_list read_exp in
+				Dynamic_Dispatch(e,methodid,args)
+			| "static_dispatch" ->
+				let e = read_exp() in
+				let typeid = read_id() in
+				let methodid = read_id() in
+				let args = read_list read_exp in
+				Static_Dispatch(e,typeid,methodid,args)
+			| "self_dispatch" ->
+				let mname = read_id() in
+				let exps = read_list read_exp in
+				Self_Dispatch(mname,exps)
+			| "if" ->
+				let pred = read_exp() in
+				let then_exp = read_exp() in
+				let else_exp = read_exp() in
+				If(pred,then_exp,else_exp)
+			| "block" ->
+				let exps = read_list read_exp in
+				Block(exps)
+			| "while" -> 
+				let pred = read_exp() in
+				let body = read_exp() in
+				While(pred,body)
+			| "new" ->
+				let new_id = read_id() in
+				New(new_id)
+			| "isvoid" ->
+				let e = read_exp() in
+				Isvoid(e)
+			| "plus" ->
+				let x = read_exp() in
+				let y = read_exp() in
+				Plus(x,y)
+			| "minus" ->
+				let x = read_exp() in
+				let y = read_exp() in
+				Minus(x,y)
+			| "times" -> 
+				let x = read_exp() in
+				let y = read_exp() in
+				Times(x,y)
+			| "divide" ->
+				let x = read_exp() in
+				let y = read_exp() in
+				Divide(x,y)
+			| "lt" ->
+				let x = read_exp() in
+				let y = read_exp() in
+				Lt(x,y)
+			| "le" ->
+				let x = read_exp() in
+				let y = read_exp() in
+				Le(x,y)
+			| "eq" -> 
+				let x = read_exp() in
+				let y = read_exp() in
+				Eq(x,y)
+			| "not" -> 
+				let x = read_exp() in
+				Not(x)
+			| "negate" ->
+				let x = read_exp() in
+				Negate(x)
 			|"integer" ->
-				let ival = read () in
+				let ival = read() in
 				Integer(ival)
-		| x -> (* FIXME: do all of the others *)
+			| "string" ->
+				let act_string = read() in
+				String(act_string)
+			| "identifier" ->
+				let act_id = read_id() in
+				Identifier(act_id)
+			| "case" ->
+				let case_exp = read_exp() in
+				let case_list = read_list read_case_element in
+				Case(case_exp,case_list)
+			| "let" ->
+				let binding_list = read_list read_binding in 
+				Let(binding_list)
+
+		| x -> (* TODO: do all of the others *)
 			failwith ("expression kind unhandled: " ^ x)
 		in
 
@@ -183,7 +315,31 @@ let main () = begin
 	let rec output_exp (eloc, ekind) =
 		fprintf fout "%s\n" eloc ;
 		match ekind with
+			| Assign(var,rhs) -> ()
+			| Dynamic_Dispatch(e,methodid,args) -> ()
+			| Static_Dispatch(e,typeid,methodid,args) -> ()
+			| Self_Dispatch(mname, exps) -> () 
+			| If(pred,then_exp,else_exp) -> ()
+			| While(pred,body) -> ()
+			| Block(exps) -> ()
+			| New(new_id) -> ()
+			| Isvoid(exp) -> ()
+			| Plus(x,y) -> ()
+			| Minus(x,y) -> ()
+			| Times(x,y) -> ()
+			| Divide(x,y) -> ()
+			| Lt(x,y) -> ()
+			| Le(x,y) -> ()
+			| Eq(x,y) -> ()
+			| Not(x) -> ()
+			| Negate(x) -> ()
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
+			| String(act_string) -> ()
+			| Identifier(act_id) -> ()
+			| Case(case_exp, case_list) -> () 
+			| Let(binding_list) -> ()
+			(* TODO: Look at each case, figure out how output works (might be later on) *)
+			(* TODO: DO ALL FOR EXPRESSIONS *)
 	in
 
 	fprintf fout "class_map\n%d\n" (List.length all_classes) ;
@@ -218,17 +374,13 @@ let main () = begin
 					List.iter (fun ((_,cname4),_,feature_list) ->
 						if cname3 = cname4 then
 							final_features := !final_features @ feature_list ;
-
 			
-              (* TODO: Determine if feature in featurelist that shares
-               * name with feature in final_featuers
-               * Need to format the error message*)
+              (* TODO:Need to format the error message *)
+
 			   			if cname <> cname4 then begin		
               				List.iter (fun (feature) ->
                 				List.iter (fun (feature2) ->
                   					if features_equal feature feature2 then begin
-                    					(* printf "ERROR: %s: Type-Check: class %s redefines attribute %s" cname feature ; *)
-                    					printf "ERROR: class _ redefines attribute _\n" ;
                     					exit(1) ;
                   					end
                 				) features ;
