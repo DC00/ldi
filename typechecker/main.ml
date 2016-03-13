@@ -22,13 +22,13 @@ and exp_kind =
 
 (* Check to see if features are equal *)
 let features_equal f1 f2 =
-  match (f1, f2) with
-  | Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
-      let loc1, name1 = id in
-      let loc2, name2 = id2 in
-      name1 = name2
+	match (f1, f2) with
+		| Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
+      		let loc1, name1 = id in
+      		let loc2, name2 = id2 in
+      		name1 = name2
   (* Can check for method overrides here too *)
-  | _,_ -> false
+  		| _,_ -> false
 
 let main () = begin
 (*
@@ -197,7 +197,6 @@ let main () = begin
 
 				let rec find_parents (inherits) =
 					try
-						(* printf "FIND: %s\n" inherits ; *)
 						let new_inherits = Hashtbl.find inheritance_tbl inherits in
 						find_parents(new_inherits) @ [ inherits ] ;
 					with Not_found ->
@@ -210,29 +209,35 @@ let main () = begin
 					| None -> [ cname ]
 				in
 
-				List.iter (fun cname ->
-					List.iter (fun ((_,cname2),_,feature_list) ->
-						if cname = cname2 then
+(*
+				List.iter (fun node ->
+					printf "NODE: %s\n" node
+				) inheritance_list ;
+*)
+				List.iter (fun cname3 ->
+					List.iter (fun ((_,cname4),_,feature_list) ->
+						if cname3 = cname4 then
+							final_features := !final_features @ feature_list ;
 
-
+			
               (* TODO: Determine if feature in featurelist that shares
                * name with feature in final_featuers
                * Need to format the error message*)
-              List.iter (fun (feature) ->
-                List.iter (fun (feature2) ->
-                  if features_equal feature feature2 then begin
-                    (* printf "ERROR: %s: Type-Check: class %s redefines attribute %s"
-                    cname feature ; *)
-                    printf "ERROR: class _ redefines attribute _\n" ;
-                    exit(1) ;
-                  end
-                ) !final_features ;
-              ) feature_list ;
-
-
-						final_features := !final_features @ feature_list ;
+			   			if cname <> cname4 then begin		
+              				List.iter (fun (feature) ->
+                				List.iter (fun (feature2) ->
+                  					if features_equal feature feature2 then begin
+                    					(* printf "ERROR: %s: Type-Check: class %s redefines attribute %s" cname feature ; *)
+                    					printf "ERROR: class _ redefines attribute _\n" ;
+                    					exit(1) ;
+                  					end
+                				) features ;
+              				) feature_list ;
+						end
+			
 					) ast
 				) inheritance_list ;
+				
 
 				List.filter (fun feature -> match feature with
 					| Attribute _ -> true
