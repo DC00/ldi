@@ -42,9 +42,10 @@ and exp_kind =
 	| String of string
 	| Identifier of id
 	| Case of exp * (case_element list)
-	| Let of (binding list)
+	| Let of (binding list) * exp
+	| True
+	| False
 
-(* TODO: all expressions *)
 
 (* Check to see if features are equal *)
 let features_equal f1 f2 =
@@ -59,16 +60,13 @@ let features_equal f1 f2 =
   		| _,_ -> false
 
 let main () = begin
-(*
-	printf "started main() \n" ;
-*)
 	(* De-serialize the CL-AST File *)
 
 	let fname = Sys.argv.(1) in
 	let fin = open_in fname in
 
 	let read () =
-		input_line fin (* FIXME: think about \r\n*)
+		input_line fin ;(* FIXME: think about \r\n*)
 	in
 
 	let rec range k =
@@ -83,8 +81,6 @@ let main () = begin
 		List.map (fun _ -> worker ()) lst
   in
 
-	(* many mutually-recursive procedures to read in CL_AST file *)
-
 	let rec read_cool_program () =
 		read_list read_cool_class
 
@@ -93,12 +89,12 @@ let main () = begin
 		let name = read () in
 		(loc, name)
 
-	and read_cool_class () =
-		let cname = read_id () in
+	and read_cool_class() =
+		let cname = read_id() in
 		let inherits = match read() with
 			|"no_inherits" -> None
 			|"inherits" ->
-				let super = read_id () in
+				let super = read_id() in
 				Some(super)
 			| x -> failwith ("cool_class: cannot happen: " ^ x)
 		in
@@ -122,7 +118,8 @@ let main () = begin
 				let mtype = read_id () in
 				let mbody = read_exp () in
 				Method(mname,formals,mtype,mbody)
-			| x -> failwith ("read_feature: cannot happen: " ^ x)
+			| x -> 
+				failwith ("read_feature: cannot happen: " ^ x)
 
 	and read_formal () =
 		let fname = read_id() in
@@ -231,15 +228,20 @@ let main () = begin
 			| "identifier" ->
 				let act_id = read_id() in
 				Identifier(act_id)
+			| "true" ->
+				True
+			| "false" ->
+				False
 			| "case" ->
 				let case_exp = read_exp() in
 				let case_list = read_list read_case_element in
 				Case(case_exp,case_list)
 			| "let" ->
 				let binding_list = read_list read_binding in 
-				Let(binding_list)
+				let body = read_exp() in
+				Let(binding_list,body)
 
-		| x -> (* TODO: do all of the others *)
+		| x -> 
 			failwith ("expression kind unhandled: " ^ x)
 		in
 
@@ -336,10 +338,16 @@ let main () = begin
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
 			| String(act_string) -> ()
 			| Identifier(act_id) -> ()
-			| Case(case_exp, case_list) -> () 
-			| Let(binding_list) -> ()
+			| True -> fprintf fout "true\n"
+			| False -> fprintf fout "false\n"
+			| Case(case_exp, case_list) ->
+				fprintf fout "case\n" ;
+				(*print_case_list case_list ;*)
+				output_exp case_exp ;
+				
+
+			| Let(binding_list,exp) -> ()
 			(* TODO: Look at each case, figure out how output works (might be later on) *)
-			(* TODO: DO ALL FOR EXPRESSIONS *)
 	in
 
 	fprintf fout "class_map\n%d\n" (List.length all_classes) ;
@@ -365,18 +373,13 @@ let main () = begin
 					| None -> [ cname ]
 				in
 
-(*
-				List.iter (fun node ->
-					printf "NODE: %s\n" node
-				) inheritance_list ;
-*)
 				List.iter (fun cname3 ->
 					List.iter (fun ((_,cname4),_,feature_list) ->
 						if cname3 = cname4 then
 							final_features := !final_features @ feature_list ;
 			
-              (* TODO:Need to format the error message *)
-
+              (* TODO: Need to fix *)
+			  (*
 			   			if cname <> cname4 then begin		
               				List.iter (fun (feature) ->
                 				List.iter (fun (feature2) ->
@@ -386,7 +389,7 @@ let main () = begin
                 				) features ;
               				) feature_list ;
 						end
-			
+				*)	
 					) ast
 				) inheritance_list ;
 				
