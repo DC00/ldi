@@ -77,6 +77,24 @@ let rec formal_duplicates lst =
 					formal_duplicates tl
 				else
 					true
+
+(* Helper function for rtrim. Find rightmost position of string *)
+let right_pos s len =
+    let rec aux i =
+        if i < 0 then None
+        else match s.[i] with
+            | ' ' | '\n' | '\t' | '\r' -> aux (pred i)
+            | _ -> Some i
+in
+aux (pred len)
+
+(* Trim tabs, newlines, and carriage chars from right side of string *)
+let rtrim s =
+    let len = String.length s in
+    match right_pos s len with
+        | Some i -> String.sub s 0 (i + 1)
+        | None -> ""
+
 let main () = begin
 	(* De-serialize the CL-AST File *)
 
@@ -84,7 +102,8 @@ let main () = begin
 	let fin = open_in fname in
 
 	let read () =
-		input_line fin ;(* FIXME: think about \r\n*)
+            let line_in = input_line fin in
+            rtrim line_in
 	in
 
 	let rec range k =
