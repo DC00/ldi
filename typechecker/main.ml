@@ -277,6 +277,7 @@ let main () = begin
 	let user_classes = List.map (fun ((_,cname),_,_) -> cname) ast in
 	let all_classes = base_classes @ user_classes in
 	let all_classes = List.sort compare all_classes in
+	let valid_types = all_classes @ ["SELF_TYPE"] in
 
 	(* 	
 		for IO - same as Object but needs to inherit IO
@@ -530,6 +531,9 @@ let main () = begin
 					let len = List.length formal_list in
 					if str = "main" && len <> 0 then
 						printf "ERROR: 0: Type-Check: class Main method main with 0 parameters not found\n";
+					if not (List.mem type_str valid_types) then
+						printf "ERROR: %s: Type-Check: class %s has method %s with unknown return type %s\n" type_loc cname str type_str;	
+						
 					List.iter (fun formal ->
 						let id,typeid = formal in
 						let formal_loc,formal_str = id in
