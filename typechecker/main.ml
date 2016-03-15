@@ -46,6 +46,7 @@ and exp_kind =
 	| True
 	| False
 
+(* HELPER FUNCTIONS *)
 
 (* Check to see if features are equal *)
 let features_equal f1 f2 =
@@ -58,6 +59,24 @@ let features_equal f1 f2 =
       			name1 = name2
   (* Can check for method overrides here too *)
   		| _,_ -> false
+
+let formals_equal f1 f2 =
+	match (f1,f2) with
+		| (id,cool_type), (id2,cool_type2) ->
+			let loc1, name1 = id in
+      		let loc2, name2 = id2 in
+			name1 = name2
+
+(* Check if a formal list has duplicates *)
+let rec formal_duplicates lst = 
+	match lst with
+		| [] -> false
+		| (hd :: tl) -> 
+			let x = (List.filter (fun x -> formals_equal x hd) tl) in
+				if x = [] then
+					formal_duplicates tl
+				else
+					true
 
 let main () = begin
 	(* De-serialize the CL-AST File *)
@@ -410,6 +429,16 @@ let main () = begin
 	List.iter (fun cname ->
 		(* name of class, # attrs, each attr=feature in turn *)
 		fprintf fout "%s\n" cname ;
+		let methods = 
+			try
+				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				List.filter (fun feature -> match feature with
+					| Attribute _ -> false
+					| Method _ -> true
+				) features
+			with Not_found ->
+				[]
+		in
 		let attributes =
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
@@ -458,6 +487,42 @@ let main () = begin
 			with Not_found ->
 				[]
 		in
+
+		List.iter (fun attr ->
+			match attr with
+				| Attribute (id,cool_type,exp) -> 
+					let loc,str = id in
+					if str = "self" then
+						printf "ERROR: %s: Type-Check: class %s has an attribute named self\n" loc cname ;
+				| _ -> ()
+		) attributes ;
+
+		List.iter (fun meth ->
+			match meth with
+				| Method (id,formal_list,typeid,exp) ->
+					let loc,str = id in
+					if str = "main" && (List.length formal_list) <> 0 then
+						printf "ERROR: 0: Type-Check: class Main method main with 0 parameters not found\n";
+					List.iter (fun formal ->
+						let id,typeid = formal in
+						let formal_loc,formal_str = id in
+						if formal_str = "self" then
+							printf "ERROR: %s: Type-Check: class %s has method %s with formal parameter named self\n" loc cname str;
+
+					) formal_list ;
+
+					List.iter (fun formal ->
+						let id,typeid = formal in
+						let formal_loc,formal_str = id in
+						if formal_duplicates formal_list then begin
+							printf "ERROR: %s: Type-Check: class %s has method %s with duplicate formal parameter named %s\n" loc cname str formal_str;
+							exit(1) ;
+						end
+					) formal_list ;
+
+				| _ -> ()
+		) methods ;
+
 		fprintf fout "%d\n" (List.length attributes) ;
 		List.iter (fun attr -> match attr with
 			| Attribute((_,aname),(_,atype),None) ->
