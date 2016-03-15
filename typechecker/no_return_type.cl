@@ -1,3 +1,4 @@
+(* Can't have unknown return types *)
 class Raymond {
     shumai : String <- "yummy" ;
     dimsum() : Foo { 3 } ;
