@@ -77,7 +77,6 @@ let rec formal_duplicates lst =
 					formal_duplicates tl
 				else
 					true
-
 let main () = begin
 	(* De-serialize the CL-AST File *)
 
@@ -278,11 +277,22 @@ let main () = begin
 	let user_classes = List.map (fun ((_,cname),_,_) -> cname) ast in
 	let all_classes = base_classes @ user_classes in
 	let all_classes = List.sort compare all_classes in
+
+	(* 	
+		for IO - same as Object but needs to inherit IO
+			out_string (1)
+			out_int (1)
+			in_string (0)
+			in_int (0)
+	
+	*)
+	let object_methods = [("abort","Object", 0) ; ("type_name","String",0) ; ("copy","SELF_TYPE",0)] in
+
+	(* TODO: Fix IO error 
+	let io_methods = [("out_string","SELF_TYPE",1) ; ("out_int","SELF_TYPE",1) ; ("in_string","String",0) ; ("in_int","Int",0)] in
+	*)
 	(* THEME IN PA4 -- you should make internal data structures to hold helper information so that you can do the checks more easily. *)
 
-
-	(* Look for Inheritance from Int
-	   Look for Inheritance from Undeclared Class *)
 
 	List.iter (fun ((cloc,cname),inherits,features) ->
 		match inherits with
@@ -318,9 +328,23 @@ let main () = begin
 		printf "ERROR: 0: Type-Check: class Main not found\n" ;
 		exit 1
 	end ;
-	
 
-	(* IF NO ERRORS *)
+	List.iter (fun cname ->
+		let duplicates = List.find_all(fun ((_,cname2),_,_) -> cname = cname2) ast in
+		if List.length duplicates > 1 then
+			let duplicates_tail = List.tl duplicates in
+			List.iter (fun class_iter ->
+				let (class_loc,redefined_class),_,_ = class_iter in
+				printf "ERROR: %s: Type-Check: class %s redefined \n" class_loc redefined_class ;
+				exit(1)
+			) duplicates_tail ;
+	) all_classes ;
+
+	List.iter (fun cname ->
+		if cname = "Object" then
+			let (loc,name),_,_ = List.find(fun ((_,cname2),_,_) -> cname = cname2) ast in
+			printf "ERROR: %s: Type-Check: class %s redefined \n" loc name ;
+	) user_classes ;
 
 	(* CLASS MAP *)
 
@@ -497,18 +521,20 @@ let main () = begin
 				| _ -> ()
 		) attributes ;
 
+
 		List.iter (fun meth ->
 			match meth with
 				| Method (id,formal_list,typeid,exp) ->
 					let loc,str = id in
-					if str = "main" && (List.length formal_list) <> 0 then
+					let type_loc,type_str = typeid in
+					let len = List.length formal_list in
+					if str = "main" && len <> 0 then
 						printf "ERROR: 0: Type-Check: class Main method main with 0 parameters not found\n";
 					List.iter (fun formal ->
 						let id,typeid = formal in
 						let formal_loc,formal_str = id in
 						if formal_str = "self" then
 							printf "ERROR: %s: Type-Check: class %s has method %s with formal parameter named self\n" loc cname str;
-
 					) formal_list ;
 
 					List.iter (fun formal ->
@@ -520,9 +546,31 @@ let main () = begin
 						end
 					) formal_list ;
 
+					List.iter(fun (mname,rtype,paramnum) ->
+						if str = mname && type_str <> rtype then
+							printf "ERROR: %s: Type-Check: class %s redefines method %s and changes return type (from %s to %s)\n" loc cname str rtype type_str ;
+						if str = mname && type_str = rtype && len <> paramnum then
+							printf "ERROR: %s: Type-Check: class %s redefines method %s and changes number of formals\n" loc cname str ;
+					) object_methods ;
 				| _ -> ()
 		) methods ;
 
+(*		TODO: fix IO and dealing with bad method override error
+		try
+			let _,inherits,_ = List.find (fun ((_,class_name),_,_) -> cname = class_name) ast in
+			let _,inherits_name = inherits in	
+			if inherits_name = "IO" then
+			List.iter(fun meth ->
+				List.iter(fun (mname,rtype,paramnum) ->
+					if str = mname && type_str <> rtype then
+						printf "ERROR: %s: Type-Check: class %s redefines method %s and changes return type (from %s to %s)\n" loc cname str rtype type_str ;
+					if str = mname && type_str = rtype && len <> paramnum then
+						printf "ERROR: %s: Type-Check: class %s redefines method %s and changes number of formals\n" loc cname str ;
+				) io_methods ;
+			) methods ;
+		with Not_found ->
+			[]
+*)
 		fprintf fout "%d\n" (List.length attributes) ;
 		List.iter (fun attr -> match attr with
 			| Attribute((_,aname),(_,atype),None) ->
