@@ -1,5 +1,5 @@
 class BadSelf {
-    delicious(self:SELF_TYPE) : Int { 3 } ;
+    delicious(x:SELF_TYPE) : Int { 3 } ;
 } ;
 
 class Main inherits IO {
