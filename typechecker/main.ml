@@ -537,13 +537,13 @@ let main () = begin
 					List.iter (fun formal ->
 						let id,typeid = formal in
 						let formal_loc,formal_str = id in
-						if formal_str = "self" then
+						let type_loc, type_str = typeid in
+						if type_str = "SELF_TYPE" then begin
+							printf "ERROR: %s: Type-Check: class %s has method %s with formal parameter of unknown type %s\n" type_loc cname str type_str;
+							exit(1) ;
+							end
+						else if formal_str = "self" then
 							printf "ERROR: %s: Type-Check: class %s has method %s with formal parameter named self\n" loc cname str;
-					) formal_list ;
-
-					List.iter (fun formal ->
-						let id,typeid = formal in
-						let formal_loc,formal_str = id in
 						if formal_duplicates formal_list then begin
 							printf "ERROR: %s: Type-Check: class %s has method %s with duplicate formal parameter named %s\n" loc cname str formal_str;
 							exit(1) ;
