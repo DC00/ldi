@@ -79,7 +79,7 @@ let main () = begin
 		(*printf "read_list of %d\n" k ; *)
 		let lst = range k in
 		List.map (fun _ -> worker ()) lst
-  in
+ 	in
 
 	let rec read_cool_program () =
 		read_list read_cool_class
@@ -291,6 +291,16 @@ let main () = begin
 			end ;
 	) ast ;
 
+	let nomain =
+		List.fold_left (fun acc user_class -> (user_class <> "Main") && acc) true user_classes
+	in
+	
+	if nomain then begin
+		printf "ERROR: 0: Type-Check: class Main not found\n" ;
+		exit 1
+	end ;
+	
+
 	(* IF NO ERRORS *)
 
 	(* CLASS MAP *)
@@ -318,18 +328,54 @@ let main () = begin
 		fprintf fout "%s\n" eloc ;
 		match ekind with
 			| Assign(var,rhs) -> ()
-			| Dynamic_Dispatch(e,methodid,args) -> ()
-			| Static_Dispatch(e,typeid,methodid,args) -> ()
-			| Self_Dispatch(mname, exps) -> () 
+			| Dynamic_Dispatch(e,methodid,args) ->
+				let loc,str = methodid in
+				fprintf fout "dynamic_dispatch\n" ;
+				output_exp e ;
+				fprintf fout "%s\n%s\n" loc str;
+				let size = List.length args in
+				fprintf fout "%d\n" size ;
+				List.iter (fun arg -> output_exp arg) args ;
+			| Static_Dispatch(e,typeid,methodid,args) ->
+				fprintf fout "static_dispatch\n" ;
+				output_exp e ;
+				let type_loc,type_str = typeid in
+				let method_loc,method_str = methodid in
+				fprintf fout "%s\n%s\n" type_loc type_str;
+				fprintf fout "%s\n%s\n" method_loc method_str;
+				let size = List.length args in
+				fprintf fout "%d\n" size ;
+				List.iter (fun arg -> output_exp arg) args ;
+			| Self_Dispatch(mname, exps) -> 
+				let loc,str = mname in
+				fprintf fout "self_dispatch\n" ;
+				fprintf fout "%s\n%s\n" loc str;
+				let size = List.length exps in
+				fprintf fout "%d\n" size ;
+				List.iter (fun exp -> output_exp exp) exps ;
 			| If(pred,then_exp,else_exp) -> ()
 			| While(pred,body) -> ()
 			| Block(exps) -> ()
-			| New(new_id) -> ()
+			| New(new_id) -> 
+				let loc,str = new_id in
+				fprintf fout "new\n%s\n%s\n" loc str
 			| Isvoid(exp) -> ()
-			| Plus(x,y) -> ()
-			| Minus(x,y) -> ()
-			| Times(x,y) -> ()
-			| Divide(x,y) -> ()
+			| Plus(x,y) ->
+				fprintf fout "plus\n" ;
+				output_exp x ;
+				output_exp y ;
+			| Minus(x,y) ->
+				fprintf fout "minus\n" ;
+				output_exp x ;
+				output_exp y ;
+			| Times(x,y) ->
+				fprintf fout "times\n" ;
+				output_exp x ;
+				output_exp y ;
+			| Divide(x,y) ->
+				fprintf fout "divide\n" ;
+				output_exp x ;
+				output_exp y ;
 			| Lt(x,y) -> ()
 			| Le(x,y) -> ()
 			| Eq(x,y) -> ()
@@ -337,18 +383,28 @@ let main () = begin
 			| Negate(x) -> ()
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
 			| String(act_string) -> ()
-			| Identifier(act_id) -> ()
+			| Identifier(act_id) ->
+				let loc,str = act_id in
+				fprintf fout "identifier\n%s\n%s\n" loc str
 			| True -> fprintf fout "true\n"
 			| False -> fprintf fout "false\n"
 			| Case(case_exp, case_list) ->
 				fprintf fout "case\n" ;
-				(*print_case_list case_list ;*)
 				output_exp case_exp ;
-				
-
+				let size = List.length case_list in
+				fprintf fout "%d\n" size ;
+				List.iter (fun case_element -> output_case_element case_element) case_list ;
 			| Let(binding_list,exp) -> ()
 			(* TODO: Look at each case, figure out how output works (might be later on) *)
+
+	and output_case_element (var,typeid,exp) =
+			let var_loc,var_str = var in
+			let typeid_loc,typeid_str = typeid in
+			fprintf fout "%s\n%s\n" var_loc var_str ;
+			fprintf fout "%s\n%s\n" typeid_loc typeid_str ;
+			output_exp exp ;
 	in
+
 
 	fprintf fout "class_map\n%d\n" (List.length all_classes) ;
 	List.iter (fun cname ->
