@@ -85,7 +85,7 @@ let right_pos s len =
         else match s.[i] with
             | ' ' | '\n' | '\t' | '\r' -> aux (pred i)
             | _ -> Some i
-in
+	in
 aux (pred len)
 
 (* Trim tabs, newlines, and carriage chars from right side of string *)
@@ -361,9 +361,12 @@ let main () = begin
 	) all_classes ;
 
 	List.iter (fun cname ->
+		let (loc,name),_,_ = List.find(fun ((_,cname2),_,_) -> cname = cname2) ast in
 		if cname = "Object" then
-			let (loc,name),_,_ = List.find(fun ((_,cname2),_,_) -> cname = cname2) ast in
 			printf "ERROR: %s: Type-Check: class %s redefined \n" loc name ;
+		if cname = "SELF_TYPE" then
+			printf "ERROR: %s: Type-Check: class named %s\n" loc cname ;
+
 	) user_classes ;
 
 	(* CLASS MAP *)
@@ -380,9 +383,7 @@ let main () = begin
 	) ast ;
 
 		(* toposort and find cycles, if cycle exists, output error *)
-
-
-
+	
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
@@ -487,13 +488,22 @@ let main () = begin
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
 				let final_features = ref [] in
+				let cycle_detect = ref [] in
 
 				let rec find_parents (inherits) =
 					try
 						let new_inherits = Hashtbl.find inheritance_tbl inherits in
+
+						if List.mem inherits !cycle_detect then begin
+							printf "ERROR: 0: Type-Check: inheritance cycle\n " ;
+							exit(1) ;
+						end
+						else 
+							cycle_detect := !cycle_detect @ [inherits] ;
+
 						find_parents(new_inherits) @ [ inherits ] ;
 					with Not_found ->
-						[ inherits ]
+						[ inherits ] ;
 				in
 
 				let inheritance_list = match inherits with
