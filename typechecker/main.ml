@@ -4,7 +4,25 @@
 
 open Printf
 
-(* Used PA3 to find all the types *)
+type static_type = 
+	| Class of string
+	| SELF_TYPE of string
+let type_to_str t = match t with
+	| Class(x) -> x
+	| SELF_TYPE(c) -> "SELF_TYPE"
+
+let rec is_subtype t1 t2 = 
+	match t1,t2 with
+		| Class(x), Class(y) when x = y -> true
+		| Class(x), Class("Object") -> true
+		| Class(x), Class(y) -> false (*TODO: check the parent map *)
+		| _,_ -> false (* TODO: Check the class notes *)
+		(* TODO: Do the 8 CASES HERE *)
+
+type object_environment = 
+	(string,static_type) Hashtbl.t
+
+let empty_object_environment() = Hashtbl.create 255
 
 type cool_program = cool_class list
 and loc = string (* these are ints but we have to put string since we are reading them*)
@@ -18,7 +36,12 @@ and feature =
 and formal = id * cool_type
 and case_element = id * cool_type * exp
 and binding = id * id * (exp option)
-and exp = loc * exp_kind
+and exp = {
+	loc : loc ;
+	exp_kind : exp_kind ;
+	mutable static_type : static_type option
+}
+
 and exp_kind =
 	| Assign of id * exp
 	| Dynamic_Dispatch of exp * id * (exp list)
@@ -281,8 +304,12 @@ let main () = begin
 		| x -> 
 			failwith ("expression kind unhandled: " ^ x)
 		in
-
-		(eloc,ekind)
+		
+		{
+			loc = eloc ;
+			exp_kind = ekind ;
+			static_type = None ;
+		}
 
 	in
 
@@ -304,7 +331,6 @@ let main () = begin
 			out_int (1)
 			in_string (0)
 			in_int (0)
-	
 	*)
 	let object_methods = [("abort","Object", 0) ; ("type_name","String",0) ; ("copy","SELF_TYPE",0)] in
 
@@ -366,9 +392,57 @@ let main () = begin
 			printf "ERROR: %s: Type-Check: class %s redefined \n" loc name ;
 		if cname = "SELF_TYPE" then
 			printf "ERROR: %s: Type-Check: class named %s\n" loc cname ;
-
 	) user_classes ;
 
+	(* TYPECHECKING *)
+	
+	let rec typecheck (o: object_environment) (* TODO: M C *) (exp : exp) : static_type =
+		let static_type = match exp.exp_kind with
+			| Integer(i) -> (Class "Int")
+			| Plus(e1,e2) ->
+				let t1 = typecheck o e1 in
+				if t1 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				let t2 = typecheck o e2 in
+				if t2 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
+					exp.loc (type_to_str t2) ;
+					exit 1 ;
+				end ;
+				(Class "Int")
+			| Identifier(vloc,vname) ->
+				if Hashtbl.mem o vname then
+					Hashtbl.find o vname
+				else begin
+					printf "ERROR: %s: Type-Check: undeclared variable %s\n" vloc vname ;
+					exit 1 ;
+				end
+			| _ -> failwith("Expression unhandled")
+				(* TODO: apply to every expression *)
+		in
+		exp.static_type <- Some(static_type) ;
+		static_type
+	in
+
+	List.iter (fun ((cloc,cname),inherits,features) ->
+		List.iter (fun feat ->
+			match feat with
+				| Attribute((nameloc,name),(dtloc,declared_type),Some(init_exp)) ->
+					let o = empty_object_environment() in
+						(* TODO: add all features to object environment *)
+					let init_type = typecheck o init_exp in
+					if is_subtype init_type (Class declared_type) then
+						()
+					else begin
+						printf "ERROR: %s: Type-Check: initializer for %s was %s did not match declared %s\n" nameloc name (type_to_str init_type) declared_type
+					end
+				| _ -> () (* TODO: Method dealing *)
+		) features ;
+	) ast ;
+				
 	(* CLASS MAP *)
 
 		(* build inheritance graph*)
@@ -382,15 +456,17 @@ let main () = begin
 			end
 	) ast ;
 
-		(* toposort and find cycles, if cycle exists, output error *)
-	
-
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
 
-	let rec output_exp (eloc, ekind) =
-		fprintf fout "%s\n" eloc ;
-		match ekind with
+	let rec output_exp e =
+		fprintf fout "%s\n" e.loc ;
+		(match e.static_type with
+			| None -> failwith "we forgot to do typechecking"
+			| Some(Class(c)) -> fprintf fout "%s\n" c
+			| Some(SELF_TYPE(c)) -> failwith "TODO: FIX THIS PLZ"
+		) ;
+		match e.exp_kind with
 			| Assign(var,rhs) -> ()
 			| Dynamic_Dispatch(e,methodid,args) ->
 				let loc,str = methodid in
@@ -614,6 +690,42 @@ let main () = begin
 			| Method _ -> failwith "method unexpected"
 		) attributes ;
 	) all_classes ;
+
+(* IMPLEMENTATION MAP *)
+
+	fprintf fout "implementation_map\n%d\n" (List.length all_classes) ;
+
+	List.iter (fun cname ->
+		fprintf fout "%s\n" cname ;
+		let methods = 
+			try
+				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				List.filter (fun feature -> match feature with
+					| Attribute _ -> false
+					| Method _ -> true
+				) features
+			with Not_found ->
+				[]
+		in
+
+		fprintf fout "%d\n" (List.length methods) ;
+		
+		List.iter (fun meth ->
+			match meth with
+				| Method ((meth_loc,meth_name),formals,_,exp) ->
+					fprintf fout "%s\n%d\n" meth_name (List.length formals) ;
+					List.iter(fun ((form_loc,form_str),_) ->
+					fprintf fout "%s\n" form_str ;	
+					) formals ;
+					(* 	* TODO: If methods are not overridden but are inherited, output parent class
+						* name otherwise, output the current class. *)
+					fprintf fout "%s\n" cname ; (* THIS IS WRONG *)
+					output_exp (exp) ;
+				| _ -> failwith("Can't happen")
+		) methods ;
+
+	) all_classes ; 
+
 	close_out fout ;
 
 
