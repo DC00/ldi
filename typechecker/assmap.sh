@@ -4,8 +4,8 @@ TEST_FILE="$1"
 if [[ -e main.ml ]] ; then
   echo "---------------------- REFERENCE ------------------------"
   cool --type $TEST_FILE --out ref_${TEST_FILE%%.*}
-  ocamlopt -o main.exe main.ml
   echo "---------------------- OUR FILE -------------------------"
+  ocamlopt -o main.exe main.ml
   cool --parse $TEST_FILE
   ./main.exe $TEST_FILE-ast
   echo "---------------------- DIFF -----------------------------"
