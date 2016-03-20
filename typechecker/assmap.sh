@@ -8,8 +8,8 @@ if [[ -e main.ml ]] ; then
   ocamlopt -o main.exe main.ml
   cool --parse $TEST_FILE
   ./main.exe $TEST_FILE-ast
-  echo "---------------------- DIFF -----------------------------"
-  diff -b -B -E -w ref_$TEST_FILE-type $TEST_FILE-type
+  # echo "---------------------- DIFF -----------------------------"
+  # diff -b -B -E -w ref_$TEST_FILE-type $TEST_FILE-type
   echo "---------------------------------------------------------"
   vimdiff ref_$TEST_FILE-type $TEST_FILE-type
 fi
