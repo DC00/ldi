@@ -15,7 +15,7 @@ let rec is_subtype t1 t2 =
 	match t1,t2 with
 		| Class(x), Class(y) when x = y -> true
 		| Class(x), Class("Object") -> true
-		| Class(x), Class(y) -> false (*TODO: check the parent map *)
+		| Class(x), Class(y) -> false (* TODO: check the parent map *)
 		| _,_ -> false (* TODO: Check the class notes *)
 		(* TODO: Do the 8 CASES HERE *)
 
@@ -398,7 +398,22 @@ let main () = begin
 	
 	let rec typecheck (o: object_environment) (* TODO: M C *) (exp : exp) : static_type =
 		let static_type = match exp.exp_kind with
-			| Integer(i) -> (Class "Int")
+			| While(e1,e2) ->
+				let t1 = typecheck o e1 in
+				if t1 <> (Class "Bool") then begin
+					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"	
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				(Class "Object")
+				
+			| Block(elist) ->
+				let t = typecheck o (List.hd (List.tl elist)) in
+				t ;
+		(*	
+			| New(e) -> 
+		*)
+			| Isvoid(e) -> (Class "Bool")
 			| Plus(e1,e2) ->
 				let t1 = typecheck o e1 in
 				if t1 <> (Class "Int") then begin
@@ -413,6 +428,138 @@ let main () = begin
 					exit 1 ;
 				end ;
 				(Class "Int")
+			| Minus(e1,e2) ->
+				let t1 = typecheck o e1 in
+				if t1 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				let t2 = typecheck o e2 in
+				if t2 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
+					exp.loc (type_to_str t2) ;
+					exit 1 ;
+				end ;
+				(Class "Int")
+			| Times(e1,e2) ->
+				let t1 = typecheck o e1 in
+				if t1 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				let t2 = typecheck o e2 in
+				if t2 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
+					exp.loc (type_to_str t2) ;
+					exit 1 ;
+				end ;
+				(Class "Int")
+			| Divide(e1,e2) ->
+				let t1 = typecheck o e1 in
+				if t1 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				let t2 = typecheck o e2 in
+				if t2 <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
+					exp.loc (type_to_str t2) ;
+					exit 1 ;
+				end ;
+				(Class "Int")
+			| Lt(e1,e2) ->
+				let t1 = typecheck o e1 in
+				let t2 = typecheck o e2 in
+				(match t1 with
+					| (Class "Int") ->
+						if t2 <> (Class "Int") then begin
+							printf "ERROR: %s: Type-Check: comparison between Int and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end
+					| (Class "Bool") ->
+						if t2 <> (Class "Bool") then begin
+							printf "ERROR: %s: Type-Check: comparison between Bool and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| (Class "String") ->
+						if t2 <> (Class "String") then begin
+							printf "ERROR: %s: Type-Check: comparison between String and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| _ -> () );
+				(Class "Bool")
+			| Le(e1,e2) ->
+				let t1 = typecheck o e1 in
+				let t2 = typecheck o e2 in
+				(match t1 with
+					| (Class "Int") ->
+						if t2 <> (Class "Int") then begin
+							printf "ERROR: %s: Type-Check: comparison between Int and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end
+					| (Class "Bool") ->
+						if t2 <> (Class "Bool") then begin
+							printf "ERROR: %s: Type-Check: comparison between Bool and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| (Class "String") ->
+						if t2 <> (Class "String") then begin
+							printf "ERROR: %s: Type-Check: comparison between String and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| _ -> () );
+				(Class "Bool")
+			| Eq(e1,e2) ->
+				let t1 = typecheck o e1 in
+				let t2 = typecheck o e2 in
+				(match t1 with
+					| (Class "Int") ->
+						if t2 <> (Class "Int") then begin
+							printf "ERROR: %s: Type-Check: comparison between Int and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end
+					| (Class "Bool") ->
+						if t2 <> (Class "Bool") then begin
+							printf "ERROR: %s: Type-Check: comparison between Bool and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| (Class "String") ->
+						if t2 <> (Class "String") then begin
+							printf "ERROR: %s: Type-Check: comparison between String and %s"
+							exp.loc (type_to_str t2) ;
+							exit 1 ;
+						end ;
+					| _ -> () );
+				(Class "Bool")
+			| Not(e) -> 
+				let t = typecheck o e in
+				if t <> (Class "Bool") then begin
+					printf "ERROR: %s: Type-Check: not applied to type %s instead of Bool"
+					exp.loc (type_to_str t)	;
+					exit 1 ;
+				end ;
+				(Class "Bool")
+			| Negate(e) ->
+				let t = typecheck o e in	
+				if t <> (Class "Int") then begin
+					printf "ERROR: %s: Type-Check: negate applied to type %s instead of Int"
+					exp.loc (type_to_str t) ;
+					exit 1 ;
+				end ;
+				(Class "Int")
+			| Integer(i) -> (Class "Int")
+			| String(e) -> (Class "String")
 			| Identifier(vloc,vname) ->
 				if Hashtbl.mem o vname then
 					Hashtbl.find o vname
@@ -420,6 +567,8 @@ let main () = begin
 					printf "ERROR: %s: Type-Check: undeclared variable %s\n" vloc vname ;
 					exit 1 ;
 				end
+			| True -> (Class "Bool")
+			| False -> (Class "Bool")
 			| _ -> failwith("Expression unhandled")
 				(* TODO: apply to every expression *)
 		in
@@ -700,10 +849,34 @@ let main () = begin
 		let methods = 
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				let final_features = ref [] in
+
+				let rec find_parents (inherits) =
+					try
+						let new_inherits = Hashtbl.find inheritance_tbl inherits in
+						find_parents(new_inherits) @ [ inherits ] ;
+					with Not_found ->
+						[ inherits ] ;
+				in
+
+				let inheritance_list = match inherits with
+					| Some (_,inherits) ->
+						find_parents inherits @ [ cname ]
+					| None -> [ cname ]
+				in
+
+				List.iter (fun cname3 ->
+					List.iter (fun ((_,cname4),_,feature_list) ->
+						if cname3 = cname4 then
+							final_features := !final_features @ feature_list ;
+					) ast
+				) inheritance_list ;
+
 				List.filter (fun feature -> match feature with
 					| Attribute _ -> false
 					| Method _ -> true
-				) features
+				) !final_features
+
 			with Not_found ->
 				[]
 		in
@@ -717,8 +890,9 @@ let main () = begin
 					List.iter(fun ((form_loc,form_str),_) ->
 					fprintf fout "%s\n" form_str ;	
 					) formals ;
-					(* 	* TODO: If methods are not overridden but are inherited, output parent class
-						* name otherwise, output the current class. *)
+					(* 	* TODO: If methods are not overridden but are inherited, output parent
+						* class name otherwise, output the current class. *)
+
 					fprintf fout "%s\n" cname ; (* THIS IS WRONG *)
 					output_exp (exp) ;
 				| _ -> failwith("Can't happen")
