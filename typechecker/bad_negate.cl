@@ -1,6 +1,6 @@
 class Main inherits IO {
-        x : Int <- 5;
-        y : Bool <- not x ;
+        x : Bool <- true;
+        y : Bool <- ~x ;
         main ( ) : Object {
         out_string ("Hi world\n")
     } ;
