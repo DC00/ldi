@@ -4,14 +4,14 @@
 
 open Printf
 
-type static_type = 
+type static_type =
 	| Class of string
 	| SELF_TYPE of string
 let type_to_str t = match t with
 	| Class(x) -> x
 	| SELF_TYPE(c) -> "SELF_TYPE"
 
-let rec is_subtype t1 t2 = 
+let rec is_subtype t1 t2 =
 	match t1,t2 with
 		| Class(x), Class(y) when x = y -> true
 		| Class(x), Class("Object") -> true
@@ -19,7 +19,7 @@ let rec is_subtype t1 t2 =
 		| _,_ -> false (* TODO: Check the class notes *)
 		(* TODO: Do the 8 CASES HERE *)
 
-type object_environment = 
+type object_environment =
 	(string,static_type) Hashtbl.t
 
 let empty_object_environment() = Hashtbl.create 255
@@ -91,15 +91,18 @@ let formals_equal f1 f2 =
 			name1 = name2
 
 (* Check if a formal list has duplicates *)
-let rec formal_duplicates lst = 
+let rec formal_duplicates lst =
 	match lst with
 		| [] -> false
-		| (hd :: tl) -> 
+		| (hd :: tl) ->
 			let x = (List.filter (fun x -> formals_equal x hd) tl) in
 				if x = [] then
 					formal_duplicates tl
 				else
 					true
+
+
+
 
 (* Helper function for rtrim. Find rightmost position of string *)
 let right_pos s len =
@@ -178,20 +181,20 @@ let main () = begin
 				let mtype = read_id () in
 				let mbody = read_exp () in
 				Method(mname,formals,mtype,mbody)
-			| x -> 
+			| x ->
 				failwith ("read_feature: cannot happen: " ^ x)
 
 	and read_formal () =
 		let fname = read_id() in
 		let ftype = read_id () in
 		(fname,ftype)
-	
+
 	and read_case_element() =
 		let var = read_id() in
 		let ctype = read_id() in
 		let body = read_exp() in
 		(var,ctype,body)
-	
+
 	and read_binding() =
 		match read() with
 			| "let_binding_no_init" ->
@@ -235,7 +238,7 @@ let main () = begin
 			| "block" ->
 				let exps = read_list read_exp in
 				Block(exps)
-			| "while" -> 
+			| "while" ->
 				let pred = read_exp() in
 				let body = read_exp() in
 				While(pred,body)
@@ -253,7 +256,7 @@ let main () = begin
 				let x = read_exp() in
 				let y = read_exp() in
 				Minus(x,y)
-			| "times" -> 
+			| "times" ->
 				let x = read_exp() in
 				let y = read_exp() in
 				Times(x,y)
@@ -269,11 +272,11 @@ let main () = begin
 				let x = read_exp() in
 				let y = read_exp() in
 				Le(x,y)
-			| "eq" -> 
+			| "eq" ->
 				let x = read_exp() in
 				let y = read_exp() in
 				Eq(x,y)
-			| "not" -> 
+			| "not" ->
 				let x = read_exp() in
 				Not(x)
 			| "negate" ->
@@ -297,14 +300,14 @@ let main () = begin
 				let case_list = read_list read_case_element in
 				Case(case_exp,case_list)
 			| "let" ->
-				let binding_list = read_list read_binding in 
+				let binding_list = read_list read_binding in
 				let body = read_exp() in
 				Let(binding_list,body)
 
-		| x -> 
+		| x ->
 			failwith ("expression kind unhandled: " ^ x)
 		in
-		
+
 		{
 			loc = eloc ;
 			exp_kind = ekind ;
@@ -325,7 +328,7 @@ let main () = begin
 	let all_classes = List.sort compare all_classes in
 	let valid_types = all_classes @ ["SELF_TYPE"] in
 
-	(* 	
+	(*
 		for IO - same as Object but needs to inherit IO
 			out_string (1)
 			out_int (1)
@@ -334,7 +337,7 @@ let main () = begin
 	*)
 	let object_methods = [("abort","Object", 0) ; ("type_name","String",0) ; ("copy","SELF_TYPE",0)] in
 
-	(* TODO: Fix IO error 
+	(* TODO: Fix IO error
 	let io_methods = [("out_string","SELF_TYPE",1) ; ("out_int","SELF_TYPE",1) ; ("in_string","String",0) ; ("in_int","Int",0)] in
 	*)
 	(* THEME IN PA4 -- you should make internal data structures to hold helper information so that you can do the checks more easily. *)
@@ -369,7 +372,7 @@ let main () = begin
 	let nomain =
 		List.fold_left (fun acc user_class -> (user_class <> "Main") && acc) true user_classes
 	in
-	
+
 	if nomain then begin
 		printf "ERROR: 0: Type-Check: class Main not found\n" ;
 		exit 1
@@ -395,23 +398,23 @@ let main () = begin
 	) user_classes ;
 
 	(* TYPECHECKING *)
-	
+
 	let rec typecheck (o: object_environment) (* TODO: M C *) (exp : exp) : static_type =
 		let static_type = match exp.exp_kind with
 			| While(e1,e2) ->
 				let t1 = typecheck o e1 in
 				if t1 <> (Class "Bool") then begin
-					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"	
+					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
 				(Class "Object")
-				
+
 			| Block(elist) ->
 				let t = typecheck o (List.hd (List.tl elist)) in
 				t ;
-		(*	
-			| New(e) -> 
+		(*
+			| New(e) ->
 		*)
 			| Isvoid(e) -> (Class "Bool")
 			| Plus(e1,e2) ->
@@ -542,7 +545,7 @@ let main () = begin
 						end ;
 					| _ -> () );
 				(Class "Bool")
-			| Not(e) -> 
+			| Not(e) ->
 				let t = typecheck o e in
 				if t <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check: not applied to type %s instead of Bool"
@@ -551,7 +554,7 @@ let main () = begin
 				end ;
 				(Class "Bool")
 			| Negate(e) ->
-				let t = typecheck o e in	
+				let t = typecheck o e in
 				if t <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: negate applied to type %s instead of Int"
 					exp.loc (type_to_str t) ;
@@ -591,7 +594,7 @@ let main () = begin
 				| _ -> () (* TODO: Method dealing *)
 		) features ;
 	) ast ;
-				
+
 	(* CLASS MAP *)
 
 		(* build inheritance graph*)
@@ -604,6 +607,12 @@ let main () = begin
 				Hashtbl.add inheritance_tbl cname parentname ;
 			end
 	) ast ;
+
+
+    Hashtbl.add inheritance_tbl "Bool" "Object" ;
+    Hashtbl.add inheritance_tbl "String" "Object" ;
+    Hashtbl.add inheritance_tbl "Int" "Object" ;
+    Hashtbl.add inheritance_tbl "IO" "Object" ;
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
@@ -635,7 +644,7 @@ let main () = begin
 				let size = List.length args in
 				fprintf fout "%d\n" size ;
 				List.iter (fun arg -> output_exp arg) args ;
-			| Self_Dispatch(mname, exps) -> 
+			| Self_Dispatch(mname, exps) ->
 				let loc,str = mname in
 				fprintf fout "self_dispatch\n" ;
 				fprintf fout "%s\n%s\n" loc str;
@@ -645,7 +654,7 @@ let main () = begin
 			| If(pred,then_exp,else_exp) -> ()
 			| While(pred,body) -> ()
 			| Block(exps) -> ()
-			| New(new_id) -> 
+			| New(new_id) ->
 				let loc,str = new_id in
 				fprintf fout "new\n%s\n%s\n" loc str
 			| Isvoid(exp) -> ()
@@ -699,7 +708,7 @@ let main () = begin
 	List.iter (fun cname ->
 		(* name of class, # attrs, each attr=feature in turn *)
 		fprintf fout "%s\n" cname ;
-		let methods = 
+		let methods =
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
 				List.filter (fun feature -> match feature with
@@ -723,7 +732,7 @@ let main () = begin
 							printf "ERROR: 0: Type-Check: inheritance cycle\n " ;
 							exit(1) ;
 						end
-						else 
+						else
 							cycle_detect := !cycle_detect @ [inherits] ;
 
 						find_parents(new_inherits) @ [ inherits ] ;
@@ -741,10 +750,10 @@ let main () = begin
 					List.iter (fun ((_,cname4),_,feature_list) ->
 						if cname3 = cname4 then
 							final_features := !final_features @ feature_list ;
-			
+
               (* TODO: Need to fix *)
 			  (*
-			   			if cname <> cname4 then begin		
+			   			if cname <> cname4 then begin
               				List.iter (fun (feature) ->
                 				List.iter (fun (feature2) ->
                   					if features_equal feature feature2 then begin
@@ -753,10 +762,10 @@ let main () = begin
                 				) features ;
               				) feature_list ;
 						end
-				*)	
+				*)
 					) ast
 				) inheritance_list ;
-				
+
 
 				List.filter (fun feature -> match feature with
 					| Attribute _ -> true
@@ -769,7 +778,7 @@ let main () = begin
 
 		List.iter (fun attr ->
 			match attr with
-				| Attribute (id,cool_type,exp) -> 
+				| Attribute (id,cool_type,exp) ->
 					let loc,str = id in
 					if str = "self" then
 						printf "ERROR: %s: Type-Check: class %s has an attribute named self\n" loc cname ;
@@ -786,8 +795,8 @@ let main () = begin
 					if str = "main" && len <> 0 then
 						printf "ERROR: 0: Type-Check: class Main method main with 0 parameters not found\n";
 					if not (List.mem type_str valid_types) then
-						printf "ERROR: %s: Type-Check: class %s has method %s with unknown return type %s\n" type_loc cname str type_str;	
-						
+						printf "ERROR: %s: Type-Check: class %s has method %s with unknown return type %s\n" type_loc cname str type_str;
+
 					List.iter (fun formal ->
 						let id,typeid = formal in
 						let formal_loc,formal_str = id in
@@ -816,7 +825,7 @@ let main () = begin
 (*		TODO: fix IO and dealing with bad method override error
 		try
 			let _,inherits,_ = List.find (fun ((_,class_name),_,_) -> cname = class_name) ast in
-			let _,inherits_name = inherits in	
+			let _,inherits_name = inherits in
 			if inherits_name = "IO" then
 			List.iter(fun meth ->
 				List.iter(fun (mname,rtype,paramnum) ->
@@ -846,7 +855,7 @@ let main () = begin
 
 	List.iter (fun cname ->
 		fprintf fout "%s\n" cname ;
-		let methods = 
+		let methods =
 			try
 				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
 				let final_features = ref [] in
@@ -882,13 +891,13 @@ let main () = begin
 		in
 
 		fprintf fout "%d\n" (List.length methods) ;
-		
+
 		List.iter (fun meth ->
 			match meth with
 				| Method ((meth_loc,meth_name),formals,_,exp) ->
 					fprintf fout "%s\n%d\n" meth_name (List.length formals) ;
 					List.iter(fun ((form_loc,form_str),_) ->
-					fprintf fout "%s\n" form_str ;	
+					fprintf fout "%s\n" form_str ;
 					) formals ;
 					(* 	* TODO: If methods are not overridden but are inherited, output parent
 						* class name otherwise, output the current class. *)
@@ -898,9 +907,25 @@ let main () = begin
 				| _ -> failwith("Can't happen")
 		) methods ;
 
-	) all_classes ; 
+	) all_classes ;
+
+
+(* PARENT MAP *)
+    fprintf fout "parent_map\n%d\n" (List.length all_classes - 1) ;
+	List.iter (fun cname ->
+        (* name of class, name of parent class. Class Object has no parent *)
+        try
+            if cname <> "Object" then begin
+                fprintf fout "%s\n" cname ;
+                let pname = Hashtbl.find inheritance_tbl cname in
+                fprintf fout "%s\n" pname ;
+            end ;
+        with Not_found ->
+            () ;
+    ) all_classes ;
 
 	close_out fout ;
+
 
 
 end ;;
