@@ -18,12 +18,6 @@ let rec is_subtype t1 t2 =
 		| Class(x), Class(y) -> false (* TODO: check the parent map *)
 		| _,_ -> false (* TODO: Check the class notes *)
 		(* TODO: Do the 8 CASES HERE *)
-		
-let rec lub t1 t2 =
-	match t1,t2 with
-		| Class(x), Class(y) when x = y -> x
-		
-		
 
 type object_environment =
 	(string,static_type) Hashtbl.t
@@ -563,7 +557,8 @@ let main () = begin
 				end ;
 				let t2 = typecheck o m e2 in
 				let t3 = typecheck o m e3 in
-				(lub t2 t3)
+				(* (lub t2 t3) *)
+                t2 ;
 
 			| While(e1,e2) ->
 				let t1 = typecheck o m e1 in
@@ -775,7 +770,21 @@ let main () = begin
     Hashtbl.add inheritance_tbl "String" "Object" ;
     Hashtbl.add inheritance_tbl "Int" "Object" ;
     Hashtbl.add inheritance_tbl "IO" "Object" ;
-	
+
+	let rec find_parents (inherits) =
+		try
+			let new_inherits = Hashtbl.find inheritance_tbl inherits in
+			find_parents(new_inherits) @ [ inherits ] ;
+		with Not_found ->
+			[ inherits ] ;
+	in
+
+
+    (* Lub lub glub glub... *)
+    let lub t1 t2 =
+        match t1,t2 with
+    in
+
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
 
@@ -1025,6 +1034,7 @@ let main () = begin
 		printf "	VAL: %s\n" v ;
 	) inheritance_tbl ;
 *)
+(*
 	let rec find_parents (inherits) =
 		try
 			let new_inherits = Hashtbl.find inheritance_tbl inherits in
@@ -1032,6 +1042,7 @@ let main () = begin
 		with Not_found ->
 			[ inherits ] ;
 	in
+*)
 
 	let method_overidden class_name meth =
 		let (_,classname),inherits,_ = 
