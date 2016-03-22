@@ -18,16 +18,23 @@ let rec is_subtype t1 t2 =
 		| Class(x), Class(y) -> false (* TODO: check the parent map *)
 		| _,_ -> false (* TODO: Check the class notes *)
 		(* TODO: Do the 8 CASES HERE *)
+		
+let rec lub t1 t2 =
+	match t1,t2 with
+		| Class(x), Class(y) when x = y -> x
+		
+		
 
 type object_environment =
 	(string,static_type) Hashtbl.t
-
 type method_environment =
     (string * string, static_type list) Hashtbl.t
-
+type class_environment = static_type
+	
 (* Initialized when we are typechecking all the features *)
 let empty_object_environment() = Hashtbl.create 255
 let empty_method_environment() = Hashtbl.create 255
+let empty_class_environment() = (Class "Dumb")
 
 type cool_program = cool_class list
 and loc = string (* these are ints but we have to put string since we are reading them*)
@@ -531,6 +538,33 @@ let main () = begin
 
 	let rec typecheck (o: object_environment) (m: method_environment) (* TODO: M C *) (exp : exp) : static_type =
 		let static_type = match exp.exp_kind with
+			| Assign(id,e) ->
+				let vloc,vname = id in
+				let t = 
+					if Hashtbl.mem o vname then
+						Hashtbl.find o vname
+					else begin 
+						printf "ERROR: %s: Type-Check: undeclared variable %s\n" vloc vname ;
+						exit 1 ;
+					end ;
+				in
+				let t2 = typecheck o m e in
+				if not (is_subtype t2 t) then begin
+					printf "ERROR: %s Type-Check: inheritance issue %s\n" vloc vname ;
+					exit 1 ;
+				end ;
+				t2 
+			| If (e1,e2,e3) ->
+				let t1 = typecheck o m e1 in
+				if t1 <> (Class "Bool") then begin
+					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"
+					exp.loc (type_to_str t1) ;
+					exit 1 ;
+				end ;
+				let t2 = typecheck o m e2 in
+				let t3 = typecheck o m e3 in
+				(lub t2 t3)
+
 			| While(e1,e2) ->
 				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Bool") then begin
@@ -539,7 +573,6 @@ let main () = begin
 					exit 1 ;
 				end ;
 				(Class "Object")
-
 			| Block(elist) ->
 				let t = typecheck o m (List.hd (List.tl elist)) in
 				t ;
@@ -749,7 +782,7 @@ let main () = begin
 	let rec output_exp e =
 		fprintf fout "%s\n" e.loc ;
 		(match e.static_type with
-			| None -> (*failwith "we forgot to do typechecking"*) ()
+			| None -> failwith "we forgot to do typechecking"
 			| Some(Class(c)) -> fprintf fout "%s\n" c
 			| Some(SELF_TYPE(c)) -> failwith "TODO: FIX THIS PLZ"
 		) ;
@@ -1023,7 +1056,6 @@ let main () = begin
 		in
 
 	List.iter (fun cname ->
-		printf "CLASS: %s\n" cname ;
 		fprintf fout "%s\n" cname ;
 		let methods =
 			try
@@ -1036,10 +1068,6 @@ let main () = begin
 					| None -> [ cname ]
 				in
 				
-				List.iter (fun blah ->
-					printf "INHERITS: %s\n" blah ;
-				) inheritance_list ;
-
 				List.iter (fun cname3 ->
 					List.iter (fun ((_,cname4),_,feature_list) ->
 						if cname3 = cname4 then begin
