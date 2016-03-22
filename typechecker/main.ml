@@ -27,7 +27,7 @@ type object_environment =
 type method_environment =
     (string * string, static_type list) Hashtbl.t
 type class_environment = static_type
-	
+
 (* Initialized when we are typechecking all the features *)
 let empty_object_environment() = Hashtbl.create 255
 let empty_method_environment() = Hashtbl.create 255
@@ -90,15 +90,15 @@ let features_equal f1 f2 =
 			if name1 = name2 then begin
             	printf "ERROR: %s: Type-Check: class redefines attribute %s\n" loc2 name1 ;
       			name1 = name2
-			end 
-			else 
+			end
+			else
 				false
   		| Method (id,_,_,_), Method (id2,_,_,_) ->
 			let loc1, name1 = id in
 			let loc2, name2 = id2 in
 			if name1 = name2 then
 				name1 = name2
-			else 	
+			else
 				false
 		| _,_ -> false
 
@@ -178,17 +178,42 @@ let rec find_parents_helper ht inherits =
     with Not_found ->
         [ inherits ]
 
+(* Find Least Upper Bound of two classes given an inheritance map
+ * of type (string, string) *)
+let lub ht t1 t2 =
+    let class1 = type_to_str t1 in
+    let class2 = type_to_str t2 in
+    let class1_list = find_parents_helper ht class1 in
+    let class2_list = find_parents_helper ht class2 in
+    printf "class1 list\n" ;
+    print_list class1_list ;
+    printf "class2 list\n" ;
+    print_list class2_list ;
+    printf "end of lists\n" ;
 
-(*
+    (* Iterate over both inheritance lists, keep track of distance
+     * from EACH class. Starting class height is 0, start at 1 *)
+    let dist_from_class1 = ref 1 in
+    let dist_from_class2 = ref 1 in
+    let current_lub_dist = ref 1 in
+    let lub_dist = ref max_int in
+    let ret = ref "" in
 
-	let rec find_parents (inherits) =
-		try
-			let new_inherits = Hashtbl.find inheritance_tbl inherits in
-			find_parents(new_inherits) @ [ inherits ] ;
-		with Not_found ->
-			[ inherits ] ;
-	in
-    *)
+    List.iter (fun c1_itr ->
+        List.iter (fun c2_itr ->
+            current_lub_dist := !dist_from_class1 + !dist_from_class2 ;
+            if c1_itr = c2_itr then
+                if current_lub_dist < lub_dist then begin
+                    lub_dist := !current_lub_dist ;
+                    ret := c2_itr ;
+                end
+            else
+                dist_from_class2 := !dist_from_class2 + 1 ;
+        ) class2_list ;
+        dist_from_class2 := 1 ;
+        dist_from_class1 := !dist_from_class1 + 1 ;
+    ) class1_list ;
+    str_to_type !ret
 
 (* GLOBAL VARIABLES *)
 
@@ -827,8 +852,6 @@ let main () = begin
     Hashtbl.add inheritance_tbl "Int" "Object" ;
     Hashtbl.add inheritance_tbl "IO" "Object" ;
 
-
-
     (* Testing lub *)
     (*
         falco : Bird -> Spacie -> Melee
@@ -849,7 +872,6 @@ let main () = begin
 
     print_ht inheritance_tbl ;
 
-
 	let rec find_parents (inherits) =
 		try
 			let new_inherits = Hashtbl.find inheritance_tbl inherits in
@@ -857,82 +879,14 @@ let main () = begin
 		with Not_found ->
 			[ inherits ] ;
 	in
-(*
-    let lub t1 t2 =
-        let class1 = type_to_str t1 in
-		let class1_list = (List.rev (find_parents class1)) in
-		let class2 = type_to_str t2 in
-		let class2_list = (List.rev (find_parents class2)) in
-        printf "Class1 = %s\n" class1 ;
-        printf "Class2 = %s\n" class2 ;
-        printf "Class1List";
-        print_list class1_list ;
-        printf "Class2List";
-        print_list class2_list ;
-
-		let min = ref ((List.length class2_list) + (List.length class1_list)) in
-		let return = ref "" in
-		let length = ref 1 in
-		let start = ref 1 in
-		List.iter (fun class_iter1 ->
-			List.iter (fun class_iter2 ->
-				if class_iter1 <> class_iter2 then
-					length := !length + 1
-				else
-					if !min >= !length then begin
-						return := class_iter2 ;
-						min := !length ;
-						length := !start ;
-					end
-			) class2_list ;
-			start := !start + 1 ;
-		) class1_list ;
-        printf "Ret=%s" !return ;
-        !return ;
-	in
-*)
-
-    let glub ht t1 t2 =
-        let class1 = type_to_str t1 in
-        let class2 = type_to_str t2 in
-        let class1_list = find_parents_helper ht class1 in
-        let class2_list = find_parents_helper ht class2 in
-        printf "class1 list\n" ;
-        print_list class1_list ;
-        printf "class2 list\n" ;
-        print_list class2_list ;
-        printf "end of lists\n" ;
-
-        (* Iterate over both inheritance lists, keep track of distance
-         * from EACH class. Starting class height is 0, start at 1 *)
-        let dist_from_class1 = ref 1 in
-        let dist_from_class2 = ref 1 in
-        let current_lub_dist = ref 1 in
-        let lub_dist = ref max_int in
-        let ret = ref "" in
-
-        List.iter (fun c1_itr ->
-            List.iter (fun c2_itr ->
-                current_lub_dist := !dist_from_class1 + !dist_from_class2 ;
-                if c1_itr = c2_itr then
-                    if current_lub_dist < lub_dist then begin
-                        lub_dist := !current_lub_dist ;
-                        ret := c2_itr ;
-                    end
-                else
-                    dist_from_class2 := !dist_from_class2 + 1 ;
-            ) class2_list ;
-            dist_from_class2 := 1 ;
-            dist_from_class1 := !dist_from_class1 + 1 ;
-        ) class1_list ;
-        str_to_type !ret
-    in
 
     printf "LUB -----------\n" ;
     let falco = Class("Falco") in
     let fox = Class("Fox") in
-    let result = glub inheritance_tbl falco fox in
+    let result = lub inheritance_tbl falco fox in
     printf "ret: %s\n" (type_to_str result) ;
+
+    (* end of testing lub *)
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
