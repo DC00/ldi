@@ -22,7 +22,12 @@ let rec is_subtype t1 t2 =
 type object_environment =
 	(string,static_type) Hashtbl.t
 
+type method_environment =
+    (string * string, static_type list) Hashtbl.t
+
+(* Initialized when we are typechecking all the features *)
 let empty_object_environment() = Hashtbl.create 255
+let empty_method_environment() = Hashtbl.create 255
 
 type cool_program = cool_class list
 and loc = string (* these are ints but we have to put string since we are reading them*)
@@ -524,10 +529,10 @@ let main () = begin
 
 	(* TYPECHECKING *)
 
-	let rec typecheck (o: object_environment) (* TODO: M C *) (exp : exp) : static_type =
+	let rec typecheck (o: object_environment) (m: method_environment) (* TODO: M C *) (exp : exp) : static_type =
 		let static_type = match exp.exp_kind with
 			| While(e1,e2) ->
-				let t1 = typecheck o e1 in
+				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"
 					exp.loc (type_to_str t1) ;
@@ -536,20 +541,20 @@ let main () = begin
 				(Class "Object")
 
 			| Block(elist) ->
-				let t = typecheck o (List.hd (List.tl elist)) in
+				let t = typecheck o m (List.hd (List.tl elist)) in
 				t ;
 		(*
 			| New(e) ->
 		*)
 			| Isvoid(e) -> (Class "Bool")
 			| Plus(e1,e2) ->
-				let t1 = typecheck o e1 in
+				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o e2 in
+				let t2 = typecheck o m e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -557,13 +562,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Minus(e1,e2) ->
-				let t1 = typecheck o e1 in
+				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o e2 in
+				let t2 = typecheck o m e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -571,13 +576,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Times(e1,e2) ->
-				let t1 = typecheck o e1 in
+				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o e2 in
+				let t2 = typecheck o m e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -585,13 +590,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Divide(e1,e2) ->
-				let t1 = typecheck o e1 in
+				let t1 = typecheck o m e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o e2 in
+				let t2 = typecheck o m e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -599,8 +604,8 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Lt(e1,e2) ->
-				let t1 = typecheck o e1 in
-				let t2 = typecheck o e2 in
+				let t1 = typecheck o m e1 in
+				let t2 = typecheck o m e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -623,8 +628,8 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Le(e1,e2) ->
-				let t1 = typecheck o e1 in
-				let t2 = typecheck o e2 in
+				let t1 = typecheck o m e1 in
+				let t2 = typecheck o m e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -647,8 +652,8 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Eq(e1,e2) ->
-				let t1 = typecheck o e1 in
-				let t2 = typecheck o e2 in
+				let t1 = typecheck o m e1 in
+				let t2 = typecheck o m e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -671,7 +676,7 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Not(e) ->
-				let t = typecheck o e in
+				let t = typecheck o m e in
 				if t <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check: not applied to type %s instead of Bool"
 					exp.loc (type_to_str t)	;
@@ -679,7 +684,7 @@ let main () = begin
 				end ;
 				(Class "Bool")
 			| Negate(e) ->
-				let t = typecheck o e in
+				let t = typecheck o m e in
 				if t <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: negate applied to type %s instead of Int"
 					exp.loc (type_to_str t) ;
@@ -709,8 +714,9 @@ let main () = begin
 			match feat with
 				| Attribute((nameloc,name),(dtloc,declared_type),Some(init_exp)) ->
 					let o = empty_object_environment() in
+                    let m = empty_object_environment() in
 						(* TODO: add all features to object environment *)
-					let init_type = typecheck o init_exp in
+					let init_type = typecheck o m init_exp in
 					if is_subtype init_type (Class declared_type) then
 						()
 					else begin
