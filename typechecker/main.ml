@@ -779,11 +779,30 @@ let main () = begin
 			[ inherits ] ;
 	in
 
-
-    (* Lub lub glub glub... *)
     let lub t1 t2 =
-        match t1,t2 with
-    in
+        let class1 = type_to_str t1 in
+		let class1_list = (List.rev (find_parents class1)) in
+		let class2 = type_to_str t2 in
+		let class2_list = (List.rev (find_parents class2)) in
+		let min = ref ((List.length class2_list) + (List.length class1_list)) in
+		let return = ref "" in
+		let length = ref 1 in
+		let start = ref 1 in
+		List.iter (fun class_iter1 ->
+			List.iter (fun class_iter2 ->
+				if class_iter1 <> class_iter2 then
+					length := !length + 1	
+				else
+					if !min >= !length then begin
+						return := class_iter2 ;
+						min := !length ;
+						length := !start ;
+					end
+			) class2_list ;
+			start := !start + 1 ;
+		) class1_list ;
+		return ;
+	in
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
