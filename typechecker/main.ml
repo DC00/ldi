@@ -68,6 +68,7 @@ and exp_kind =
 	| Let of (binding list) * exp
 	| True
 	| False
+	| Internal of string * string
 
 (* HELPER FUNCTIONS *)
 
@@ -77,11 +78,20 @@ let features_equal f1 f2 =
 		| Attribute (id, cool_type, exp), Attribute (id2, cool_type2, exp2) ->
       		let loc1, name1 = id in
       		let loc2, name2 = id2 in
-			if name1 = name2 then
+			if name1 = name2 then begin
             	printf "ERROR: %s: Type-Check: class redefines attribute %s\n" loc2 name1 ;
       			name1 = name2
-  (* Can check for method overrides here too *)
-  		| _,_ -> false
+			end 
+			else 
+				false
+  		| Method (id,_,_,_), Method (id2,_,_,_) ->
+			let loc1, name1 = id in
+			let loc2, name2 = id2 in
+			if name1 = name2 then
+				name1 = name2
+			else 	
+				false
+		| _,_ -> false
 
 let formals_equal f1 f2 =
 	match (f1,f2) with
@@ -101,9 +111,6 @@ let rec formal_duplicates lst =
 				else
 					true
 
-
-
-
 (* Helper function for rtrim. Find rightmost position of string *)
 let right_pos s len =
     let rec aux i =
@@ -121,8 +128,123 @@ let rtrim s =
         | Some i -> String.sub s 0 (i + 1)
         | None -> ""
 
+(* GLOBAL VARIABLES *)
+
+let obj_class =
+	let abort_exp =
+		{
+			loc = "0" ;
+			exp_kind = Internal("Object","Object.abort") ;
+			static_type = None ;
+		}
+	in
+	let copy_exp =
+		{
+			loc = "0" ;
+			exp_kind = Internal("SELF_TYPE","Object.copy") ;
+			static_type = None ;
+		}
+	in	
+	let type_name_exp =
+		{
+			loc = "0" ;
+			exp_kind = Internal("String","Object.type_name") ;
+			static_type = None ;
+		}
+	in
+	let c_name = ("0","Object") in
+	let c_inherits = None in
+	let c_features = [
+    	Method(("0","abort"),[],("0","Object"),abort_exp) ;
+      	Method(("0","copy"),[],("0","SELF_TYPE"),copy_exp) ;
+      	Method(("0","type_name"),[],("0","String"),type_name_exp) ;
+    ]
+	in
+	(c_name,c_inherits,c_features)
+
+let io_class =
+	let out_string_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("SELF_TYPE","IO.out_string") ;
+			static_type = None ;
+		}
+	in
+	let out_int_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("SELF_TYPE","IO.out_int") ;
+			static_type = None ;
+		}
+	in
+	let in_string_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("String","IO.in_string") ;
+			static_type = None ;
+		}
+	in
+	let in_int_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("Int","IO.in_int") ;
+			static_type = None ;
+		}
+	in
+	let c_name = ("0","IO") in
+	let c_inherits = Some("0", "Object") in
+	let c_features = [
+      	Method(("0","in_int"),[],("0","Int"),in_int_exp) ;
+      	Method(("0","in_string"),[],("0","String"),in_string_exp) ;
+      	Method(("0","out_int"),[(("0","x"),("0","Int"))],("0","SELF_TYPE"),out_int_exp) ;
+    	Method(("0","out_string"),[(("0","x"),("0","String"))],("0","SELF_TYPE"),out_string_exp) ;
+    ]
+	in
+	(c_name,c_inherits,c_features)
+	
+let string_class =
+	let length_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("Int","String.length") ;
+			static_type = None ;
+		}
+	in
+	let concat_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("String","String.concat") ;
+			static_type = None ;
+		}
+	in
+	let substr_exp = 
+		{
+			loc = "0" ;
+			exp_kind = Internal("String","String.substr") ;
+			static_type = None ;
+		}
+	in
+	let c_name = ("0","String") in
+	let c_inherits = Some("0","Object") in
+	let c_features = [
+      	Method(("0","concat"),[(("0","s"),("0","String"))],("0","String"),concat_exp) ;
+    	Method(("0","length"),[],("0","Int"),length_exp) ;
+      	Method(("0","substr"),[(("0","i"),("0","Int")) ; (("0","l"),("0","Int"))],("0","String"),substr_exp) ;
+    ]
+	in
+	(c_name,c_inherits,c_features)
+let bool_class =
+	let c_name = ("0","Bool") in
+	let c_inherits = Some("0","Object") in
+	let c_features = [] in
+	(c_name,c_inherits,c_features)
+let int_class =
+	let c_name = ("0","Int") in
+	let c_inherits = Some("0","Object") in
+	let c_features = [] in
+	(c_name,c_inherits,c_features)
+
 let main () = begin
-	(* De-serialize the CL-AST File *)
 
 	let fname = Sys.argv.(1) in
 	let fin = open_in fname in
@@ -316,14 +438,17 @@ let main () = begin
 
 	in
 
-	let ast = read_cool_program () in
+	let ast = ref (read_cool_program()) in
 	close_in fin ;
+
+	let new_ast = !ast @ [obj_class ; io_class ; string_class ; bool_class ; int_class ] in
+
 	(*printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;*)
 
 	(* Check for Class-Related Errors (look at PA4) *)
 
-	let base_classes = ["Int" ; "String" ; "Bool" ; "IO" ; "Object" ] in
-	let user_classes = List.map (fun ((_,cname),_,_) -> cname) ast in
+	let base_classes = ["Int" ; "Bool" ; "IO" ; "Object" ; "String" ; ] in
+	let user_classes = List.map (fun ((_,cname),_,_) -> cname) !ast in
 	let all_classes = base_classes @ user_classes in
 	let all_classes = List.sort compare all_classes in
 	let valid_types = all_classes @ ["SELF_TYPE"] in
@@ -367,7 +492,7 @@ let main () = begin
 					iloc iname ;
 				exit 1
 			end ;
-	) ast ;
+	) !ast ;
 
 	let nomain =
 		List.fold_left (fun acc user_class -> (user_class <> "Main") && acc) true user_classes
@@ -379,7 +504,7 @@ let main () = begin
 	end ;
 
 	List.iter (fun cname ->
-		let duplicates = List.find_all(fun ((_,cname2),_,_) -> cname = cname2) ast in
+		let duplicates = List.find_all(fun ((_,cname2),_,_) -> cname = cname2) !ast in
 		if List.length duplicates > 1 then
 			let duplicates_tail = List.tl duplicates in
 			List.iter (fun class_iter ->
@@ -390,7 +515,7 @@ let main () = begin
 	) all_classes ;
 
 	List.iter (fun cname ->
-		let (loc,name),_,_ = List.find(fun ((_,cname2),_,_) -> cname = cname2) ast in
+		let (loc,name),_,_ = List.find(fun ((_,cname2),_,_) -> cname = cname2) !ast in
 		if cname = "Object" then
 			printf "ERROR: %s: Type-Check: class %s redefined \n" loc name ;
 		if cname = "SELF_TYPE" then
@@ -593,7 +718,7 @@ let main () = begin
 					end
 				| _ -> () (* TODO: Method dealing *)
 		) features ;
-	) ast ;
+	) !ast ;
 
 	(* CLASS MAP *)
 
@@ -606,21 +731,19 @@ let main () = begin
 			| Some (_,parentname) -> begin
 				Hashtbl.add inheritance_tbl cname parentname ;
 			end
-	) ast ;
-
-
+	) !ast ;
     Hashtbl.add inheritance_tbl "Bool" "Object" ;
     Hashtbl.add inheritance_tbl "String" "Object" ;
     Hashtbl.add inheritance_tbl "Int" "Object" ;
     Hashtbl.add inheritance_tbl "IO" "Object" ;
-
+	
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
 
 	let rec output_exp e =
 		fprintf fout "%s\n" e.loc ;
 		(match e.static_type with
-			| None -> failwith "we forgot to do typechecking"
+			| None -> (*failwith "we forgot to do typechecking"*) ()
 			| Some(Class(c)) -> fprintf fout "%s\n" c
 			| Some(SELF_TYPE(c)) -> failwith "TODO: FIX THIS PLZ"
 		) ;
@@ -680,7 +803,8 @@ let main () = begin
 			| Not(x) -> ()
 			| Negate(x) -> ()
 			| Integer(ival) -> fprintf fout "integer\n%s\n" ival
-			| String(act_string) -> ()
+			| String(act_string) -> 
+				fprintf fout "string\n%s\n" act_string
 			| Identifier(act_id) ->
 				let loc,str = act_id in
 				fprintf fout "identifier\n%s\n%s\n" loc str
@@ -693,6 +817,10 @@ let main () = begin
 				fprintf fout "%d\n" size ;
 				List.iter (fun case_element -> output_case_element case_element) case_list ;
 			| Let(binding_list,exp) -> ()
+			| Internal (class_name,classdotmethod) -> 
+				fprintf fout "%s\n" class_name ;
+				fprintf fout "internal\n" ;
+				fprintf fout "%s\n" classdotmethod ;
 			(* TODO: Look at each case, figure out how output works (might be later on) *)
 
 	and output_case_element (var,typeid,exp) =
@@ -710,7 +838,7 @@ let main () = begin
 		fprintf fout "%s\n" cname ;
 		let methods =
 			try
-				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) !ast in
 				List.filter (fun feature -> match feature with
 					| Attribute _ -> false
 					| Method _ -> true
@@ -720,7 +848,7 @@ let main () = begin
 		in
 		let attributes =
 			try
-				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) !ast in
 				let final_features = ref [] in
 				let cycle_detect = ref [] in
 
@@ -763,7 +891,7 @@ let main () = begin
               				) feature_list ;
 						end
 				*)
-					) ast
+					) !ast
 				) inheritance_list ;
 
 
@@ -852,33 +980,66 @@ let main () = begin
 (* IMPLEMENTATION MAP *)
 
 	fprintf fout "implementation_map\n%d\n" (List.length all_classes) ;
+(*
+	Hashtbl.iter (fun k v ->
+		printf "KEY: %s\n" k ;
+		printf "	VAL: %s\n" v ;
+	) inheritance_tbl ;
+*)
+	let rec find_parents (inherits) =
+		try
+			let new_inherits = Hashtbl.find inheritance_tbl inherits in
+			find_parents(new_inherits) @ [ inherits ] ;
+		with Not_found ->
+			[ inherits ] ;
+	in
+
+	let method_overidden class_name meth =
+		let (_,classname),inherits,_ = 
+			List.find (fun ((_,cname),_,_) -> class_name = cname) new_ast 
+		in	
+		match inherits with
+			| None -> class_name
+			| Some(_,inherit_str) -> begin
+				let return_str = ref class_name in
+				let listofchecking = find_parents(inherit_str) in 
+				List.iter (fun class_iter ->
+					let (_,_,features) = 	
+						List.find (fun ((_,cname),_,_) -> class_iter = cname) new_ast
+					in
+					List.iter (fun feature_iter ->
+						if features_equal meth feature_iter	then
+							return_str := class_iter
+					) features ;	
+				) listofchecking ;
+				!return_str
+			end
+		in
 
 	List.iter (fun cname ->
+		printf "CLASS: %s\n" cname ;
 		fprintf fout "%s\n" cname ;
 		let methods =
 			try
-				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) ast in
+				let _, inherits, features =	List.find (fun ((_,cname2),_,_) -> cname = cname2) new_ast in
 				let final_features = ref [] in
-
-				let rec find_parents (inherits) =
-					try
-						let new_inherits = Hashtbl.find inheritance_tbl inherits in
-						find_parents(new_inherits) @ [ inherits ] ;
-					with Not_found ->
-						[ inherits ] ;
-				in
 
 				let inheritance_list = match inherits with
 					| Some (_,inherits) ->
 						find_parents inherits @ [ cname ]
 					| None -> [ cname ]
 				in
+				
+				List.iter (fun blah ->
+					printf "INHERITS: %s\n" blah ;
+				) inheritance_list ;
 
 				List.iter (fun cname3 ->
 					List.iter (fun ((_,cname4),_,feature_list) ->
-						if cname3 = cname4 then
+						if cname3 = cname4 then begin
 							final_features := !final_features @ feature_list ;
-					) ast
+						end
+					) new_ast
 				) inheritance_list ;
 
 				List.filter (fun feature -> match feature with
@@ -887,6 +1048,7 @@ let main () = begin
 				) !final_features
 
 			with Not_found ->
+				printf "NOT_FOUND\n" ;
 				[]
 		in
 
@@ -902,7 +1064,7 @@ let main () = begin
 					(* 	* TODO: If methods are not overridden but are inherited, output parent
 						* class name otherwise, output the current class. *)
 
-					fprintf fout "%s\n" cname ; (* THIS IS WRONG *)
+					fprintf fout "%s\n" (method_overidden cname meth) ;
 					output_exp (exp) ;
 				| _ -> failwith("Can't happen")
 		) methods ;
