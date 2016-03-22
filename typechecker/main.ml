@@ -14,13 +14,6 @@ let str_to_type t = match t with
     | "SELF_TYPE" -> SELF_TYPE(t)
     | _ -> Class(t)
 
-let rec is_subtype t1 t2 =
-	match t1,t2 with
-		| Class(x), Class(y) when x = y -> true
-		| Class(x), Class("Object") -> true
-		| Class(x), Class(y) -> false (* TODO: check the parent map *)
-		| _,_ -> false (* TODO: Check the class notes *)
-		(* TODO: Do the 8 CASES HERE *)
 
 type object_environment =
 	(string,static_type) Hashtbl.t
@@ -180,40 +173,51 @@ let rec find_parents_helper ht inherits =
 
 (* Find Least Upper Bound of two classes given an inheritance map
  * of type (string, string) *)
-let lub ht t1 t2 =
-    let class1 = type_to_str t1 in
-    let class2 = type_to_str t2 in
-    let class1_list = find_parents_helper ht class1 in
-    let class2_list = find_parents_helper ht class2 in
-    printf "class1 list\n" ;
-    print_list class1_list ;
-    printf "class2 list\n" ;
-    print_list class2_list ;
-    printf "end of lists\n" ;
+let rec lub ht t1 t2 =
+	match t1,t2 with
+		| SELF_TYPE(x),SELF_TYPE(y) when x = y -> SELF_TYPE(x) ;
+		| SELF_TYPE(x), Class(y) -> begin
+			let x_static = Class(x) in
+			let y_static = Class(y) in
+			lub ht x_static y_static
+		end
+		| Class(x), SELF_TYPE(y) -> begin
+			let x_static = Class(x) in
+			let y_static = Class(y) in
+			lub ht y_static x_static
+		end
+		| Class(x), Class(y) -> begin
+    		let class1 = type_to_str t1 in
+    		let class2 = type_to_str t2 in
+			let class1_list = find_parents_helper ht class1 in
+			let class2_list = find_parents_helper ht class2 in
 
-    (* Iterate over both inheritance lists, keep track of distance
-     * from EACH class. Starting class height is 0, start at 1 *)
-    let dist_from_class1 = ref 1 in
-    let dist_from_class2 = ref 1 in
-    let current_lub_dist = ref 1 in
-    let lub_dist = ref max_int in
-    let ret = ref "" in
+			(* Iterate over both inheritance lists, keep track of distance
+			 * from EACH class. Starting class height is 0, start at 1 *)
 
-    List.iter (fun c1_itr ->
-        List.iter (fun c2_itr ->
-            current_lub_dist := !dist_from_class1 + !dist_from_class2 ;
-            if c1_itr = c2_itr then
-                if current_lub_dist < lub_dist then begin
-                    lub_dist := !current_lub_dist ;
-                    ret := c2_itr ;
-                end
-            else
-                dist_from_class2 := !dist_from_class2 + 1 ;
-        ) class2_list ;
-        dist_from_class2 := 1 ;
-        dist_from_class1 := !dist_from_class1 + 1 ;
-    ) class1_list ;
-    str_to_type !ret
+			let dist_from_class1 = ref 1 in
+			let dist_from_class2 = ref 1 in
+			let current_lub_dist = ref 1 in
+			let lub_dist = ref max_int in
+			let ret = ref "" in
+
+			List.iter (fun c1_itr ->
+				List.iter (fun c2_itr ->
+					current_lub_dist := !dist_from_class1 + !dist_from_class2 ;
+					if c1_itr = c2_itr then
+						if current_lub_dist < lub_dist then begin
+							lub_dist := !current_lub_dist ;
+							ret := c2_itr ;
+						end
+					else
+						dist_from_class2 := !dist_from_class2 + 1 ;
+				) class2_list ;
+				dist_from_class2 := 1 ;
+				dist_from_class1 := !dist_from_class1 + 1 ;
+			) class1_list ;
+			str_to_type !ret
+		end
+		|_,_ -> failwith("LUB Failure: this can't happen")
 
 (* GLOBAL VARIABLES *)
 
@@ -530,6 +534,39 @@ let main () = begin
 
 	let new_ast = !ast @ [obj_class ; io_class ; string_class ; bool_class ; int_class ] in
 
+	let inheritance_tbl = Hashtbl.create 100 in
+	List.iter (fun ((_,cname),inherits,_) ->
+		match inherits with
+			| None -> ()
+			| Some (_,parentname) -> begin
+				Hashtbl.add inheritance_tbl cname parentname ;
+			end
+	) !ast ;
+
+    Hashtbl.add inheritance_tbl "Bool" "Object" ;
+    Hashtbl.add inheritance_tbl "String" "Object" ;
+    Hashtbl.add inheritance_tbl "Int" "Object" ;
+    Hashtbl.add inheritance_tbl "IO" "Object" ;
+
+	let rec find_parents (inherits) =
+		try
+			let new_inherits = Hashtbl.find inheritance_tbl inherits in
+			find_parents(new_inherits) @ [ inherits ] ;
+		with Not_found ->
+			[ inherits ] ;
+	in
+
+	let rec is_subtype t1 t2 =
+		match t1,t2 with
+			| Class(x), Class(y) when x = y -> true
+			| Class(x), Class("Object") -> true
+			| Class(x), Class(y) -> (List.mem y (find_parents x))
+			| SELF_TYPE(x), Class(y) -> (List.mem y (find_parents x))
+			| SELF_TYPE(x), SELF_TYPE(y) when x = y -> true
+			| Class(x), SELF_TYPE(y) -> false
+			| _,_ -> false (* TODO: Check the class notes *)
+	in
+
 	(*printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;*)
 
 	(* Check for Class-Related Errors (look at PA4) *)
@@ -638,8 +675,7 @@ let main () = begin
 				end ;
 				let t2 = typecheck o m e2 in
 				let t3 = typecheck o m e3 in
-				(* (lub t2 t3) *)
-                t2 ;
+				(lub inheritance_tbl t2 t3)
 
 			| While(e1,e2) ->
 				let t1 = typecheck o m e1 in
@@ -837,56 +873,6 @@ let main () = begin
 
 	(* CLASS MAP *)
 
-		(* build inheritance graph*)
-
-	let inheritance_tbl = Hashtbl.create 100 in
-	List.iter (fun ((_,cname),inherits,_) ->
-		match inherits with
-			| None -> ()
-			| Some (_,parentname) -> begin
-				Hashtbl.add inheritance_tbl cname parentname ;
-			end
-	) !ast ;
-    Hashtbl.add inheritance_tbl "Bool" "Object" ;
-    Hashtbl.add inheritance_tbl "String" "Object" ;
-    Hashtbl.add inheritance_tbl "Int" "Object" ;
-    Hashtbl.add inheritance_tbl "IO" "Object" ;
-
-    (* Testing lub *)
-    (*
-        falco : Bird -> Spacie -> Melee
-        fox   : Fox -> Spacie -> Melee
-
-        marth : Swordsman -> Fire Emblem -> Melee
-        roy   : Swordsman -> Fire Emblem -> Melee
-
-        pikachu : Electric -> Pokemon
-        yoshi   : Dinosaur -> Melee
-    *)
-
-    Hashtbl.add inheritance_tbl "Fox" "NotBird" ;
-    Hashtbl.add inheritance_tbl "Falco" "Bird" ;
-    Hashtbl.add inheritance_tbl "Bird" "Spacie" ;
-    Hashtbl.add inheritance_tbl "NotBird" "Spacie" ;
-    Hashtbl.add inheritance_tbl "Spacie" "Melee" ;
-
-    print_ht inheritance_tbl ;
-
-	let rec find_parents (inherits) =
-		try
-			let new_inherits = Hashtbl.find inheritance_tbl inherits in
-			find_parents(new_inherits) @ [ inherits ] ;
-		with Not_found ->
-			[ inherits ] ;
-	in
-
-    printf "LUB -----------\n" ;
-    let falco = Class("Falco") in
-    let fox = Class("Fox") in
-    let result = lub inheritance_tbl falco fox in
-    printf "ret: %s\n" (type_to_str result) ;
-
-    (* end of testing lub *)
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
