@@ -10,6 +10,9 @@ type static_type =
 let type_to_str t = match t with
 	| Class(x) -> x
 	| SELF_TYPE(c) -> "SELF_TYPE"
+let str_to_type t = match t with
+    | "SELF_TYPE" -> SELF_TYPE(t)
+    | _ -> Class(t)
 
 let rec is_subtype t1 t2 =
 	match t1,t2 with
@@ -164,6 +167,28 @@ let print_list l =
     List.iter (fun e ->
         printf "%s\n" e
     ) l
+
+(* Find the inheritance list of a hash table of type
+ * string, string *)
+let rec find_parents_helper ht inherits =
+    try
+        let new_inherits = Hashtbl.find ht inherits in
+        let p = find_parents_helper ht new_inherits in
+        [ inherits ] @ p;
+    with Not_found ->
+        [ inherits ]
+
+
+(*
+
+	let rec find_parents (inherits) =
+		try
+			let new_inherits = Hashtbl.find inheritance_tbl inherits in
+			find_parents(new_inherits) @ [ inherits ] ;
+		with Not_found ->
+			[ inherits ] ;
+	in
+    *)
 
 (* GLOBAL VARIABLES *)
 
@@ -816,8 +841,10 @@ let main () = begin
         yoshi   : Dinosaur -> Melee
     *)
 
-    Hashtbl.add inheritance_tbl "Fox" "Spacie" ;
-    Hashtbl.add inheritance_tbl "Falco" "Spacie" ;
+    Hashtbl.add inheritance_tbl "Fox" "NotBird" ;
+    Hashtbl.add inheritance_tbl "Falco" "Bird" ;
+    Hashtbl.add inheritance_tbl "Bird" "Spacie" ;
+    Hashtbl.add inheritance_tbl "NotBird" "Spacie" ;
     Hashtbl.add inheritance_tbl "Spacie" "Melee" ;
 
     print_ht inheritance_tbl ;
@@ -830,7 +857,7 @@ let main () = begin
 		with Not_found ->
 			[ inherits ] ;
 	in
-
+(*
     let lub t1 t2 =
         let class1 = type_to_str t1 in
 		let class1_list = (List.rev (find_parents class1)) in
@@ -863,14 +890,49 @@ let main () = begin
         printf "Ret=%s" !return ;
         !return ;
 	in
+*)
 
+    let glub ht t1 t2 =
+        let class1 = type_to_str t1 in
+        let class2 = type_to_str t2 in
+        let class1_list = find_parents_helper ht class1 in
+        let class2_list = find_parents_helper ht class2 in
+        printf "class1 list\n" ;
+        print_list class1_list ;
+        printf "class2 list\n" ;
+        print_list class2_list ;
+        printf "end of lists\n" ;
+
+        (* Iterate over both inheritance lists, keep track of distance
+         * from EACH class. Starting class height is 0, start at 1 *)
+        let dist_from_class1 = ref 1 in
+        let dist_from_class2 = ref 1 in
+        let current_lub_dist = ref 1 in
+        let lub_dist = ref max_int in
+        let ret = ref "" in
+
+        List.iter (fun c1_itr ->
+            List.iter (fun c2_itr ->
+                current_lub_dist := !dist_from_class1 + !dist_from_class2 ;
+                if c1_itr = c2_itr then
+                    if current_lub_dist < lub_dist then begin
+                        lub_dist := !current_lub_dist ;
+                        ret := c2_itr ;
+                    end
+                else
+                    dist_from_class2 := !dist_from_class2 + 1 ;
+            ) class2_list ;
+            dist_from_class2 := 1 ;
+            dist_from_class1 := !dist_from_class1 + 1 ;
+        ) class1_list ;
+        str_to_type !ret
+    in
 
     printf "LUB -----------\n" ;
     let falco = Class("Falco") in
     let fox = Class("Fox") in
-    let leastub = lub falco fox in
-    (* printf "%s\n" (type_to_str leastub) ; *)
-
+    let result = glub inheritance_tbl falco fox in
+    printf "ret: %s\n" (type_to_str result) ;
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
