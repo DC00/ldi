@@ -134,6 +134,37 @@ let rtrim s =
         | Some i -> String.sub s 0 (i + 1)
         | None -> ""
 
+(* Print a hashtbl of type (string, string) *)
+let print_ht ht =
+    Hashtbl.iter (fun k v ->
+        printf "%s: %s\n" k v ;
+    ) ht
+
+(* Print a hashtbl of type (string * string, static_type list) *)
+let print_ht_types ht =
+    Hashtbl.iter (fun (k1,k2) v ->
+        printf "%s: %s" k1 k2 ;
+        List.iter (fun e ->
+            printf "%s " (type_to_str e) ;
+        ) v ;
+    ) ht
+
+(* Print a hashtbl of type (string, static_type list *)
+let print_ht_single_type ht =
+    Hashtbl.iter (fun k v ->
+        printf "%s => " k ;
+        List.iter (fun e ->
+            printf "%s " (type_to_str e) ;
+        ) v ;
+        printf "\n" ;
+    ) ht
+
+(* Print a string list *)
+let print_list l =
+    List.iter (fun e ->
+        printf "%s\n" e
+    ) l
+
 (* GLOBAL VARIABLES *)
 
 let obj_class =
@@ -771,6 +802,27 @@ let main () = begin
     Hashtbl.add inheritance_tbl "Int" "Object" ;
     Hashtbl.add inheritance_tbl "IO" "Object" ;
 
+
+
+    (* Testing lub *)
+    (*
+        falco : Bird -> Spacie -> Melee
+        fox   : Fox -> Spacie -> Melee
+
+        marth : Swordsman -> Fire Emblem -> Melee
+        roy   : Swordsman -> Fire Emblem -> Melee
+
+        pikachu : Electric -> Pokemon
+        yoshi   : Dinosaur -> Melee
+    *)
+
+    Hashtbl.add inheritance_tbl "Fox" "Spacie" ;
+    Hashtbl.add inheritance_tbl "Falco" "Spacie" ;
+    Hashtbl.add inheritance_tbl "Spacie" "Melee" ;
+
+    print_ht inheritance_tbl ;
+
+
 	let rec find_parents (inherits) =
 		try
 			let new_inherits = Hashtbl.find inheritance_tbl inherits in
@@ -784,6 +836,13 @@ let main () = begin
 		let class1_list = (List.rev (find_parents class1)) in
 		let class2 = type_to_str t2 in
 		let class2_list = (List.rev (find_parents class2)) in
+        printf "Class1 = %s\n" class1 ;
+        printf "Class2 = %s\n" class2 ;
+        printf "Class1List";
+        print_list class1_list ;
+        printf "Class2List";
+        print_list class2_list ;
+
 		let min = ref ((List.length class2_list) + (List.length class1_list)) in
 		let return = ref "" in
 		let length = ref 1 in
@@ -791,7 +850,7 @@ let main () = begin
 		List.iter (fun class_iter1 ->
 			List.iter (fun class_iter2 ->
 				if class_iter1 <> class_iter2 then
-					length := !length + 1	
+					length := !length + 1
 				else
 					if !min >= !length then begin
 						return := class_iter2 ;
@@ -801,8 +860,17 @@ let main () = begin
 			) class2_list ;
 			start := !start + 1 ;
 		) class1_list ;
-		return ;
+        printf "Ret=%s" !return ;
+        !return ;
 	in
+
+
+    printf "LUB -----------\n" ;
+    let falco = Class("Falco") in
+    let fox = Class("Fox") in
+    let leastub = lub falco fox in
+    (* printf "%s\n" (type_to_str leastub) ; *)
+
 
 	let cmname = (Filename.chop_extension fname) ^ ".cl-type" in
 	let fout = open_out cmname in
@@ -810,7 +878,7 @@ let main () = begin
 	let rec output_exp e =
 		fprintf fout "%s\n" e.loc ;
 		(match e.static_type with
-			| None -> failwith "we forgot to do typechecking"
+			| None -> (* failwith "we forgot to do typechecking" *) ()
 			| Some(Class(c)) -> fprintf fout "%s\n" c
 			| Some(SELF_TYPE(c)) -> failwith "TODO: FIX THIS PLZ"
 		) ;
