@@ -14,7 +14,6 @@ let str_to_type t = match t with
     | "SELF_TYPE" -> SELF_TYPE(t)
     | _ -> Class(t)
 
-
 type object_environment =
 	(string,static_type) Hashtbl.t
 type method_environment =
@@ -219,6 +218,8 @@ let rec lub ht t1 t2 =
 		end
 		|_,_ -> failwith("LUB Failure: this can't happen")
 
+(* Check static types of two lists for errors *)
+
 (* GLOBAL VARIABLES *)
 
 let obj_class =
@@ -334,6 +335,8 @@ let int_class =
 	let c_inherits = Some("0","Object") in
 	let c_features = [] in
 	(c_name,c_inherits,c_features)
+
+let base_classes_with_methods = [ obj_class ; io_class ; string_class ]
 
 let main () = begin
 
@@ -567,6 +570,19 @@ let main () = begin
 			| _,_ -> false (* TODO: Check the class notes *)
 	in
 
+	let rec check_static_types list1 list2 =
+		let l1_hd = (List.hd list1) in
+		let l2_hd = (List.hd list2) in
+		if (List.length list1) = 0 then begin
+			() ;
+		end ;
+		if is_subtype l1_hd l2_hd then
+			check_static_types (List.tl list1) (List.tl list2)
+		else
+			printf "ERROR\n" ;
+			exit 1 ;
+	in
+
 	(*printf "CL-AST de-serialized, %d classes\n" (List.length ast) ;*)
 
 	(* Check for Class-Related Errors (look at PA4) *)
@@ -648,7 +664,7 @@ let main () = begin
 
 	(* TYPECHECKING *)
 
-	let rec typecheck (o: object_environment) (m: method_environment) (* TODO: M C *) (exp : exp) : static_type =
+	let rec typecheck (o: object_environment) (m: method_environment) (c: class_environment) (exp : exp) : static_type =
 		let static_type = match exp.exp_kind with
 			| Assign(id,e) ->
 				let vloc,vname = id in
@@ -660,25 +676,118 @@ let main () = begin
 						exit 1 ;
 					end ;
 				in
-				let t2 = typecheck o m e in
+				let t2 = typecheck o m c e in
 				if not (is_subtype t2 t) then begin
 					printf "ERROR: %s Type-Check: inheritance issue %s\n" vloc vname ;
 					exit 1 ;
 				end ;
 				t2 
+			| Dynamic_Dispatch(e,m_id,elist) ->
+				let f_loc,f_name = m_id in
+				let t0 = typecheck o m c e in
+				let argtypes = List.map (fun e -> typecheck o m c e) elist in
+				let t0' =
+					if t0 = SELF_TYPE(type_to_str c) then
+						c		
+					else
+						t0
+				in
+				let t0'_string = type_to_str t0' in
+				let arg'types = 
+				try
+					Hashtbl.find m (t0'_string,f_name)
+				with Not_found -> begin
+					printf "ERROR %s : Type-Check\n" f_loc;
+					exit 1 ;
+				end ;
+				in
+
+				check_static_types argtypes arg'types ;
+				let tnplus1' = List.hd (List.rev arg'types) in 
+				let ret =
+					if (type_to_str tnplus1') = "SELF_TYPE" then
+						t0
+					else
+						tnplus1'
+				in
+				ret ;
+			| Static_Dispatch(e,t_id,m_id,elist) ->
+				let f_loc,f_name = m_id in
+				let t_loc, t_name = t_id in
+				let t0 = typecheck o m c e in
+				let argtypes = List.map (fun e -> typecheck o m c e) elist in
+
+				if (is_subtype t0 (str_to_type t_name)) then begin
+					printf "ERROR %s : Type-Check\n" t_loc ;
+					exit 1 ;
+				end ;
+
+				let t0' =
+					if t0 = SELF_TYPE(type_to_str c) then
+						c		
+					else
+						t0
+				in
+				let t0'_string = type_to_str t0' in
+				let arg'types = 
+				try
+					Hashtbl.find m (t0'_string,f_name)
+				with Not_found -> begin
+					printf "ERROR %s : Type-Check\n" f_loc ;
+					exit 1 ;
+				end ;
+				in
+
+				check_static_types argtypes arg'types ;
+				let tnplus1' = List.hd (List.rev arg'types) in 
+				let ret =
+					if (type_to_str tnplus1') = "SELF_TYPE" then
+						t0
+					else
+						tnplus1'
+				in
+				ret ;
+				
+			| Self_Dispatch(m_id,elist) ->
+				let f_loc,f_name = m_id in
+				let t0 = c in
+				let argtypes = List.map (fun e -> typecheck o m c e) elist in
+				let t0' =
+					if t0 = SELF_TYPE(type_to_str c) then
+						c		
+					else
+						t0
+				in
+				let t0'_string = type_to_str t0' in
+				let arg'types = 
+				try
+					Hashtbl.find m (t0'_string,f_name)
+				with Not_found -> begin
+					printf "ERROR %s : Type-Check\n" f_loc ;
+					exit 1 ;
+				end ;
+				in
+				check_static_types argtypes arg'types ;
+				let tnplus1' = List.hd (List.rev arg'types) in 
+				let ret =
+					if (type_to_str tnplus1') = "SELF_TYPE" then
+						t0
+					else
+						tnplus1'
+				in
+				ret ;
 			| If (e1,e2,e3) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o m e2 in
-				let t3 = typecheck o m e3 in
+				let t2 = typecheck o m c e2 in
+				let t3 = typecheck o m c e3 in
 				(lub inheritance_tbl t2 t3)
-
 			| While(e1,e2) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check predicate has type %s instead of Bool \n"
 					exp.loc (type_to_str t1) ;
@@ -686,20 +795,23 @@ let main () = begin
 				end ;
 				(Class "Object")
 			| Block(elist) ->
-				let t = typecheck o m (List.hd (List.tl elist)) in
+				let t = typecheck o m c (List.hd (List.tl elist)) in
 				t ;
-		(*
-			| New(e) ->
-		*)
+			| New(id) -> 
+				let idloc,idname = id in
+				if idname = "SELF_TYPE" then
+					SELF_TYPE(type_to_str c)	
+				else
+					Class(idname) ;
 			| Isvoid(e) -> (Class "Bool")
 			| Plus(e1,e2) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o m e2 in
+				let t2 = typecheck o m c e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: adding %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -707,13 +819,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Minus(e1,e2) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o m e2 in
+				let t2 = typecheck o m c e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: subtracting %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -721,13 +833,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Times(e1,e2) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o m e2 in
+				let t2 = typecheck o m c e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: multiplying %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -735,13 +847,13 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Divide(e1,e2) ->
-				let t1 = typecheck o m e1 in
+				let t1 = typecheck o m c e1 in
 				if t1 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
 					exp.loc (type_to_str t1) ;
 					exit 1 ;
 				end ;
-				let t2 = typecheck o m e2 in
+				let t2 = typecheck o m c e2 in
 				if t2 <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: dividing %s instead of Int\n"
 					exp.loc (type_to_str t2) ;
@@ -749,8 +861,8 @@ let main () = begin
 				end ;
 				(Class "Int")
 			| Lt(e1,e2) ->
-				let t1 = typecheck o m e1 in
-				let t2 = typecheck o m e2 in
+				let t1 = typecheck o m c e1 in
+				let t2 = typecheck o m c e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -773,8 +885,8 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Le(e1,e2) ->
-				let t1 = typecheck o m e1 in
-				let t2 = typecheck o m e2 in
+				let t1 = typecheck o m c e1 in
+				let t2 = typecheck o m c e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -797,8 +909,8 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Eq(e1,e2) ->
-				let t1 = typecheck o m e1 in
-				let t2 = typecheck o m e2 in
+				let t1 = typecheck o m c e1 in
+				let t2 = typecheck o m c e2 in
 				(match t1 with
 					| (Class "Int") ->
 						if t2 <> (Class "Int") then begin
@@ -821,7 +933,7 @@ let main () = begin
 					| _ -> () );
 				(Class "Bool")
 			| Not(e) ->
-				let t = typecheck o m e in
+				let t = typecheck o m c e in
 				if t <> (Class "Bool") then begin
 					printf "ERROR: %s: Type-Check: not applied to type %s instead of Bool"
 					exp.loc (type_to_str t)	;
@@ -829,7 +941,7 @@ let main () = begin
 				end ;
 				(Class "Bool")
 			| Negate(e) ->
-				let t = typecheck o m e in
+				let t = typecheck o m c e in
 				if t <> (Class "Int") then begin
 					printf "ERROR: %s: Type-Check: negate applied to type %s instead of Int"
 					exp.loc (type_to_str t) ;
@@ -847,27 +959,175 @@ let main () = begin
 				end
 			| True -> (Class "Bool")
 			| False -> (Class "Bool")
+			(*
+			| Let(blist,e) -> 
+			*)	
+			| Case(e,clist) ->
+				let t0 = typecheck o m c e in
+				if (type_to_str t0) = "SELF_TYPE" then begin
+					printf "ERROR : %s : Type-Check\n" e.loc ;
+					exit 1 ;
+				end ;
+				let clist_types = 
+					List.map (fun ((idloc,idname),(typeloc,typename),exp) ->
+						if typename = "SELF_TYPE" then begin
+							printf "ERROR : %s : Type-Check\n" typeloc ;
+							exit 1 ;
+						end ;
+						let type_static = Class(typename) in
+						Hashtbl.add o idname type_static ;
+						let t'n = typecheck o m c exp in
+						t'n ;
+					) clist ;
+				in
+				let ret_type =
+					List.fold_left (fun acc x -> lub inheritance_tbl acc x) (List.hd clist_types) clist_types
+				in
+				ret_type ;
+
 			| _ -> failwith("Expression unhandled")
-				(* TODO: apply to every expression *)
 		in
 		exp.static_type <- Some(static_type) ;
 		static_type
 	in
 
+	let o = empty_object_environment() in
+	let m = empty_method_environment() in
+
+	List.iter (fun class_name ->
+		let class_static_type = Class(class_name) in
+		Hashtbl.add o class_name class_static_type 	
+	) all_classes ;
+
+(* get all methods and return a list of static types of their formals
+	cname,mname -> list of static types (return types) of formals
+*)
+	(* add in base classes and methods *)
+
+	Hashtbl.add m ("Object", "abort") [Class("Object")] ;	
+	Hashtbl.add m ("Object", "type_name") [Class("String")] ;	
+	Hashtbl.add m ("Object", "copy") [SELF_TYPE("Object")] ;	
+	Hashtbl.add m ("IO", "out_string") [Class("String") ; SELF_TYPE("IO")] ;	
+	Hashtbl.add m ("IO", "out_int") [Class("Int") ; SELF_TYPE("IO")] ;	
+	Hashtbl.add m ("IO", "in_string") [Class("String")] ;	
+	Hashtbl.add m ("IO", "in_int") [Class("Int")] ;	
+	Hashtbl.add m ("String", "length") [Class("Int")] ;	
+	Hashtbl.add m ("String", "concat") [Class("String") ; Class("String")] ;	
+	Hashtbl.add m ("String", "substr") [Class("Int") ; Class("Int") ; Class("String")] ;	
+	
+	List.iter (fun ((_,cname),_,features) ->
+		let methods =
+			List.filter (fun feature -> match feature with
+				| Attribute _ -> false
+				| Method _ -> true
+			) features ;
+		in
+		List.iter (fun meth ->
+			match meth with
+				| Method ((_,mname),formal_list,(_,retname),_) ->
+					let key = (cname,mname) in
+					let args =
+						List.map (fun (_,(_,typename)) -> Class(typename)) formal_list
+					in
+					let value =
+						if retname = "SELF_TYPE" then
+							args @ [ SELF_TYPE(cname) ]
+						else
+							args @ [ Class(retname) ]
+					in
+					Hashtbl.add m key value 
+				| _ -> failwith("Cannot happen")
+		) methods ;
+	) !ast ;
+
+	(* Iterate over every class and typecheck all features *)
 	List.iter (fun ((cloc,cname),inherits,features) ->
 		List.iter (fun feat ->
 			match feat with
 				| Attribute((nameloc,name),(dtloc,declared_type),Some(init_exp)) ->
-					let o = empty_object_environment() in
-                    let m = empty_object_environment() in
-						(* TODO: add all features to object environment *)
-					let init_type = typecheck o m init_exp in
-					if is_subtype init_type (Class declared_type) then
+					let c = Class cname in
+				(* Oc(x) = T0 *) (* Class declared_type = T0 *)
+					let t0 =
+						if Hashtbl.mem o declared_type then
+							Hashtbl.find o declared_type
+						else begin
+							printf "ERROR: %s: Type-Check" dtloc ;
+							exit 1 ;
+						end ;
+					in
+				(* Oc[SELF_TYPE/self],M,C |- e1 : T1 *)
+					let class_name_type = SELF_TYPE(cname) in
+					Hashtbl.add o cname class_name_type; 
+					let t1 = typecheck o m c init_exp in
+				(* T0 <= T1 *)
+					if is_subtype t1 t0 then
 						()
 					else begin
-						printf "ERROR: %s: Type-Check: initializer for %s was %s did not match declared %s\n" nameloc name (type_to_str init_type) declared_type
+						printf "ERROR: %s: Type-Check: initializer for %s was %s did not match declared %s\n" nameloc name (type_to_str t1) declared_type ;
+						exit 1 ;
+					end ;
+				| Attribute((nameloc,name),(dtloc,declared_type),None) ->
+					if Hashtbl.mem o declared_type then
+						()
+					else begin
+						printf "ERROR: %s: Type-Check" dtloc ;
+						exit 1 ;
 					end
-				| _ -> () (* TODO: Method dealing *)
+				| Method((nameloc,mname),arglist,(dtloc,declared_type),exp) ->
+					let c = Class cname in
+					(* M(C,f) = (T1,...Tn,T0) *)
+					let key = (cname,mname) in
+					let args =
+						List.map (fun (_,(_,typename)) -> Class(typename)) arglist
+					in
+					let value =
+						if declared_type = "SELF_TYPE" then
+							args @ [ SELF_TYPE(cname) ]
+						else
+							args @ [ Class(declared_type) ]
+					in
+
+					if not (Hashtbl.mem m key) then begin
+						printf "ERROR : %s: Type-Check\n" nameloc ;
+						exit 1 ;	
+					end ;
+
+					if (Hashtbl.find m key) <> value then begin
+						printf "ERROR : %s: Type-Check\n" nameloc ;
+						exit 1 ;	
+					end ;
+
+					(* OC[SELF_TYPE(C)/self][T1/x1]...[Tn/xn],M,C |- e : T'0 *)
+					(* List of formals mapped to their type. First part means every
+					 * instance of 'self' in Oc is SELF_TYPE(C) *)
+
+					let self_typec = SELF_TYPE(type_to_str c) in
+					let t0 = Class(declared_type) in
+					Hashtbl.add o cname self_typec ;
+					List.iter (fun ((_,idname),(_,typename)) -> 
+						let static_type = Class(typename) in
+						Hashtbl.add o idname static_type ;
+					) arglist ;
+					let t'0 = typecheck o m c exp in 
+
+					(* T0' <= { SELF_TYPE(C)	if T0 = SELF_TYPE	}
+							  { T0				otherwise			} *)
+					(* T0 in this case is declared_type *)
+					let check_bool = ref false in
+					if declared_type = "SELF_TYPE" then begin
+						check_bool := is_subtype t'0 self_typec
+					end
+					else begin
+						check_bool := is_subtype t'0 t0
+					end ;
+
+					if not !check_bool then begin
+						printf "ERROR: %s : Type-Check\n" exp.loc ;
+						exit 1 ;
+					end ;
+					() ;
+					
+					
 		) features ;
 	) !ast ;
 
@@ -880,7 +1140,7 @@ let main () = begin
 	let rec output_exp e =
 		fprintf fout "%s\n" e.loc ;
 		(match e.static_type with
-			| None -> (* failwith "we forgot to do typechecking" *) ()
+			| None -> failwith "we forgot to do typechecking"
 			| Some(Class(c)) -> fprintf fout "%s\n" c
 			| Some(SELF_TYPE(c)) -> failwith "TODO: FIX THIS PLZ"
 		) ;
@@ -994,7 +1254,7 @@ let main () = begin
 						let new_inherits = Hashtbl.find inheritance_tbl inherits in
 
 						if List.mem inherits !cycle_detect then begin
-							printf "ERROR: 0: Type-Check: inheritance cycle\n " ;
+							printf "ERROR: 0: Type-Check: inheritance cycle:\n" ;
 							exit(1) ;
 						end
 						else
@@ -1195,9 +1455,6 @@ let main () = begin
 					List.iter(fun ((form_loc,form_str),_) ->
 					fprintf fout "%s\n" form_str ;
 					) formals ;
-					(* 	* TODO: If methods are not overridden but are inherited, output parent
-						* class name otherwise, output the current class. *)
-
 					fprintf fout "%s\n" (method_overidden cname meth) ;
 					output_exp (exp) ;
 				| _ -> failwith("Can't happen")
