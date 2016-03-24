@@ -954,14 +954,56 @@ let main () = begin
 				if Hashtbl.mem o vname then
 					Hashtbl.find o vname
 				else begin
-					printf "ERROR: %s: Type-Check: undeclared variable %s\n" vloc vname ;
+					printf "ERROR: %s: Type-Check: undeclared variable2 %s\n" vloc vname ;
 					exit 1 ;
 				end
 			| True -> (Class "Bool")
 			| False -> (Class "Bool")
-			(*
-			| Let(blist,e) -> 
-			*)	
+			| Let(blist,e) ->
+		(* let x1 : T1 [ <- e1 ] in (let x2 : T2 [ <- e2 ], ... let xn : Tn [ <- en ] in e) *)
+				let rec let_eval obj lst = 
+					(match lst with
+						| [] ->
+							let ret_t = typecheck obj m c e in
+							ret_t
+						| hd :: tl ->
+							(match hd with
+								| (bind_loc,bind_name),(type_loc,type_name),Some(exp) ->
+									if bind_name = "self" then begin
+										printf "ERROR: %s: Type-Check8\n" bind_loc ;
+										exit 1 ;
+									end ;
+									let t'0 = 
+										if type_name = "SELF_TYPE" then
+											SELF_TYPE(type_to_str c)
+										else
+											Class(type_name)
+									in
+									let t1 = typecheck obj m c exp in
+									if not (is_subtype t1 t'0) then begin
+										printf "ERROR: %s: Type-Check9\n" exp.loc ;
+										exit 1 ;
+									end ;
+									Hashtbl.add obj bind_name t'0 ;
+									let_eval obj tl
+
+								| (bind_loc,bind_name),(type_loc,type_name),None ->
+									if bind_name = "self" then begin
+										printf "ERROR: %s: Type-Check10\n" bind_loc ;
+										exit 1 ;
+									end ;
+									let t'0 = 
+										if type_name = "SELF_TYPE" then
+											SELF_TYPE(type_to_str c)
+										else
+											Class(type_name)
+									in
+									Hashtbl.add obj bind_name t'0 ;
+									let_eval obj tl
+							);
+						);
+				in
+				let_eval o blist ;	
 			| Case(e,clist) ->
 				let t0 = typecheck o m c e in
 				if (type_to_str t0) = "SELF_TYPE" then begin
