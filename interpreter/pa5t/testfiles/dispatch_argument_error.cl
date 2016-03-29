@@ -4,7 +4,7 @@ class Main inherits IO {
 
 	main() : Object {
 	{
-		function(x,x <- 10,(x * x)) ;	
+		function( { out_int(1) ; x ; out_int(3) ; x <- 5 ; x ; } , { out_int(2) ; x <- 2 ; x ;}, { out_int(5) ; x <- (x * 10) ; x ; } ) ;	
 			
 	}
 	} ;
