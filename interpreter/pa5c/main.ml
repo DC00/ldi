@@ -7,6 +7,7 @@
 (* New, Dispatch, Variable, Assign, Integer, Plus *)
 open Printf
 
+(* Expression types used in Cool AST *)
 type exp =
     | New of string (* new Point *)
     | Dispatch of exp * string * (exp list) (* self.foo(a1, a2, ..., an) *)
@@ -41,7 +42,6 @@ type cool_value =
  * If x lives at 33 and y lives at address 7, we would have
  * [ ("x", 33)  ; ("y", 7) ]
  *)
-
 type environment = (string * cool_address) list
 
 (* Store: Maps Cool Addresses -> Cool Values *)
@@ -64,8 +64,7 @@ type class_map = (string * ((string * exp) list)) list
 
 (* Implementation map:
     * Maps ("Class Name", "Method Name") to
-    * the method formal parameter names
-    * the method body
+    * the method formal parameter names and the method body
     * TODO: check what the full version should be!
     * TODO: READ in from Annotated AST
 *)
@@ -77,15 +76,28 @@ type imp_map =
 
 (* For now, just going to have a test type of class map,
  * Just has a class called Main with one attribute x <- 5
+ * Sample test program we will interpret with hardcoded class_map
+ * and imp_map
+ *
  *
  * class Main {
         x : Int <- 5;
-        y : Int <- 3;
+        y : Int <- x + 2;
+        main () : Object { x + y }
    };
 *)
 let class_map : class_map =
     [ ("Main", [ "x", Integer(5l) ;
-                 "y", Integer(3l) ])]
+                 "y", (Plus(Variable("x"),Integer(2l)))])]
+
+(* Need hardcoded implementation map for testing *)
+(* TODO: Read in imp map from AST *)
+let imp_map : imp_map =
+    [ (("Main", "main") , ([],
+                          (Plus(Variable("x"), (Variable("y")))))) ]
+
+(* NOTE: The Annotated AST and the AST are redundant for the class_map and
+ * the implementation map *)
 
 (************************************************************************************)
 (* Debugging and Tracing                                                            *)
@@ -143,14 +155,14 @@ let value_to_str v =
 let env_to_str env =
     let binding_str = List.fold_left (fun acc (aname, aaddr) ->
         sprintf "%s, %s=%d" acc aname aaddr
-    ) "" env in
+    ) "" (List.sort compare env) in
     sprintf "[%s]" binding_str
 
 (* Print Stores *)
 let store_to_str env =
     let binding_str = List.fold_left (fun acc (addr, cvalue) ->
     sprintf "%s, %d=%s" acc addr (value_to_str cvalue)
-    ) "" env in
+    ) "" (List.sort compare env) in
     sprintf "[%s]" binding_str
 
 
@@ -184,6 +196,7 @@ let rec eval (so : cool_value)  (* self object *)
              store)             (* updated store *)
              =
     indent_count := !indent_count + 2;
+    debug "\n" ;
     debug_indent() ; debug "eval: %s\n" (exp_to_str exp) ;
     debug_indent() ; debug "env = %s\n" (value_to_str so) ;
     debug_indent() ; debug "sto = %s\n" (store_to_str s) ;
@@ -239,7 +252,7 @@ let rec eval (so : cool_value)  (* self object *)
         (* Fifth rule in Oper. Symantcs for New VIDEO - 37:45 *)
         (* s2 is like s1 but with store updates associated with it *)
         (* Now, evaluate all initializers as assignment statements *)
-        let s2 = s@store_updates in
+        let s2 = s @ store_updates in
     
         (* Sixth rule in Operational Symantics of New *)
         (* We have a list of attr initializers, fold left over them *)
@@ -249,19 +262,79 @@ let rec eval (so : cool_value)  (* self object *)
         ) s2 attrs_and_inits in
         v1, final_store
 
+    (* Weimer gets a Steam update at 48:20 *)
+    | Variable(vname) ->
+        let l = List.assoc vname e in
+        let final_value = List.assoc l s in
+        final_value, s
+    | Dispatch(e0, fname, args) ->
+        (* evaluate all of the args in turn, then do the receiver object *)
+        (* arguments must come first. Note the values, and build up the final
+           store. Can use for loop or fold_left
+        *)
+        
+        (* Evaluate the arguments *)
+        let current_store = ref s in
+        let arg_values = List.map (fun arg_exp ->
+            let arg_value, new_store = eval so !current_store e arg_exp in
+            current_store := new_store ;
+            arg_value
+        ) args in
+        (* !current_store = s_n in the CRM *)
+
+        (* Evaluate Receiver Object *)
+        let v0, s_nplus2 = eval so !current_store e e0 in
+        
+        (* Look up things in implementation map *)
+        begin match v0 with
+            | Cool_Object(x, attrs_and_locs) -> 
+                (* TODO: Make sure it is there, if not you have a PA5 bug *)
+                let formals, body = List.assoc (x, fname) imp_map in
+
+            (* Make new locations for each of the actual arguments
+             * VIDEO  56:06 *)
+            let new_arg_locs = List.map (fun arg_exp ->
+                newloc ()
+            ) args in
+
+            (* Make an updated store, where in each of those new locations, we
+             * store the corresponding argument value *)
+            let store_update = List.combine new_arg_locs arg_values in
+
+            (* Last rule of Dispatch *)
+            (* TODO: Should put formal parameters first so that they are visible
+             * and they shadow the attributes *)
+            let s_nplus3 = store_update @ s_nplus2 in
+            eval v0 s_nplus3  attrs_and_locs body
+            | _ -> failwith "not handled yet in Dispatch"
+        end
     | _ -> failwith "unhandled so far"
     in
+
+    (* Current return value *)
     debug_indent () ; debug "ret = %s\n" (value_to_str new_value) ;
+
+    (* Current value of Store *)
+    debug_indent () ; debug "rets = %s\n" (store_to_str  new_store) ;
+
+
     (* Could also print the outgoing store *)
     (* Makes funny sound at 42:24 *)
     indent_count := !indent_count - 2;
     new_value, new_store
 
-
-
 let main () = begin
     (* There are L's after each digit *)
-    let my_exp = Plus(Integer(5l), Integer(3l)) in
+    (* let old_exp = Plus(Integer(5l), Integer(3l)) in *)
+    (* let my_exp = New("Main") in *)
+
+    (* Implicitly Cool programs start with. this is what Cool interpreter does:
+        *
+        *    (new Main).main()
+        *
+        *)
+    let my_exp = Dispatch(New("Main"), "main", []) in
+
     debug "my_exp = %s\n" (exp_to_str my_exp); 
 
     let so = Void in
@@ -300,6 +373,52 @@ let main () = begin
     *)
 
 
+    (* OUTPUT WITH NEW EXP VIDEO 45:38 *)
+    (*
+        my_exp = New(Main)
+            eval: New(Main)
+            env = Void
+            sto = []
+            env = []
+    
+                # x is five to start out
+                # We made a new env that says x=1001 and y=1002
+                eval: Assign(x,Integer(5))
+                env = Main([, x=1001, y=1002])
+
+                # Store initially holds default value 0
+                sto = [, 1001=Integer(0), 1002=Integer(0)]
+                env = [, x=1001, y=1002]
+                    eval: Integer(5)
+                    env = Main([, x=1001, y=1002])
+                    sto = [, 1001=Integer(0), 1002=Integer(0)]
+                    env = [, x=1001, y=1002]
+                    ret = Integer(5)
+                    rets = [, 1001=Integer(0), 1002=Integer(0)]
+                ret = Integer(5)
+
+                # Video 46:49
+                # After the assignment statement, we change the Store
+                rets = [, 1001=Integer(5), 1002=Integer(0)]
+
+                # y is 3
+                eval: Assign(y,Integer(3))
+                env = Main([, x=1001, y=1002])
+                sto = [, 1001=Integer(5), 1002=Integer(0)]
+                env = [, x=1001, y=1002]
+                    eval: Integer(3)
+                    env = Main([, x=1001, y=1002])
+                    sto = [, 1001=Integer(5), 1002=Integer(0)]
+                    env = [, x=1001, y=1002]
+                    ret = Integer(3)
+                    rets = [, 1001=Integer(5), 1002=Integer(0)]
+                ret = Integer(3)
+                rets = [, 1001=Integer(5), 1002=Integer(3)]
+            ret = Main([, x=1001, y=1002])
+            rets = [, 1001=Integer(5), 1002=Integer(3)]
+        result = Main([, x=1001, y=1002])
+
+    *) 
 end ;;
 main () ;;
 
