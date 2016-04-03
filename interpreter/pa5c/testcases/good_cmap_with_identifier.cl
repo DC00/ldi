@@ -1,6 +1,6 @@
 class Main inherits IO{
-	x : Int <- 999;
-	y : Int <- x + 888 / 777;
+	x : Bool <- true;
+	y : Bool <- not x;
 	main () : Object {
 		x
 	};

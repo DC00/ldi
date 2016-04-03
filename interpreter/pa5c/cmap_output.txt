@@ -1,0 +1,14 @@
+String => 0
+
+Int => 0
+
+Object => 0
+
+Bool => 0
+
+IO => 0
+
+Main => 0
+Main => ('x', 'Bool', [Bool(true)])
+Main => ('y', 'Bool', [Not(ID(x))])
+
