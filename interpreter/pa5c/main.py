@@ -27,22 +27,38 @@ class Type:
 	# 		return "exp not handled in to string"
 
 	def __repr__(self):
-		if self.exp_kind == "plus":
-			return "Plus(%s)" % (str(self.exp))
+                if self.exp_kind == "isvoid":
+                    return "IsVoid(%s)" % (str(self.exp))
+                elif self.exp_kind == "lt":
+                    return "Lt(%s)" % (str(self.exp))
+                elif self.exp_kind == "le":
+                    return "Le(%s)" % (str(self.exp))
+                elif self.exp_kind == "eq":
+                    return "Eq(%s)" % (str(self.exp))
+                elif self.exp_kind == "times":
+                    return "Times(%s)" % (str(self.exp))
+                elif self.exp_kind == "divide":
+                    return "Divide(%s)" % (str(self.exp))
+                elif self.exp_kind == "minus":
+                    return "Minus(%s)" % (str(self.exp))
+		elif self.exp_kind == "plus":
+		    return "Plus(%s)" % (str(self.exp))
 		elif self.exp_kind == "not":
-			return "Not(%s)" % (str(self.exp))
+	    	    return "Not(%s)" % (str(self.exp))
+                elif self.exp_kind == "negate":
+                    return "Negate(%s)" % (str(self.exp)) 
 		elif self.exp_kind == "integer":
-			return "Integer(%s)" % (str(self.exp))
+		    return "Integer(%s)" % (str(self.exp))
 		elif self.exp_kind == "string":
-			return "String(%s)" % (str(self.exp))
+		    return "String(%s)" % (str(self.exp))
 		elif self.exp_kind == "true":
-			return "Bool(%s)" % (str(self.exp))
+		    return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "false":
-			return "Bool(%s)" % (str(self.exp))
+		    return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "identifier":
-			return "ID(%s)" % (str(self.exp))
+		    return "ID(%s)" % (str(self.exp))
 		else:
-			return "exp not handled in to string"
+		    return "exp not handled in to string"
 
 	def des(self):
 		if self.exp_kind == "true" or self.exp_kind == "false":
@@ -119,43 +135,56 @@ io_pmap = io_pmap[0:split_pos]
 
 # Serialize the class_map
 class_map = {}
+def read_exp_list(e):
+     
+
+def read_id(e):
+    idloc = e.pop(0)
+    idname = e.pop(0)
+    t = Type(idloc, "identifier", idname)
+    return t
+
 
 def read_exp(e):
-	# Know that we need to read an exp
-	# return a tuple (loc, exp_kind, exp subparts)
-	# recurse on the subparts
-	loc = e.pop(0)
-	exp_kind = e.pop(0)
-	
-	if exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
-		first_exp = read_exp(e)
-		second_exp = read_exp(e)
-		t = Type(loc, exp_kind, [first_exp, second_exp])
-		return t
-	elif exp_kind == "not":
-		t = Type(loc, exp_kind, read_exp(e))
-		return t
-	elif exp_kind == "integer":
-		int_constant = e.pop(0)
-		t = Type(loc, exp_kind, int_constant)
-		return t
-	elif exp_kind == "string":
-		str_constant = e.pop(0)	
-		t = Type(loc, exp_kind, str_constant)
-		return t
-	elif exp_kind == "true":
-		t = Type(loc, exp_kind, "true")
-		return t
-	elif exp_kind == "false":
-		t = Type(loc, exp_kind, "false")
-		return t
-	elif exp_kind == "identifier":
-		idloc = e.pop(0)
-		idname = e.pop(0)
-		t = Type(idloc, exp_kind, idname)
-		return t
-	else:
-		print "Expression %s not handled in read_exp(e)" % (exp_kind)
+    # Know that we need to read an exp
+    # return a tuple (loc, exp_kind, exp subparts)
+    # recurse on the subparts
+    loc = e.pop(0)
+    exp_kind = e.pop(0)
+    if exp_kind == "new":
+        return read_id(e) 
+    elif exp_kind == "isvoid":
+        t = Type(loc, exp_kind, read_exp(e)) 
+        return t
+    elif exp_kind == "negate":
+        t = Type(loc, exp_kind, read_exp(e))
+        return t
+    elif exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
+            first_exp = read_exp(e)
+            second_exp = read_exp(e)
+            t = Type(loc, exp_kind, [first_exp, second_exp])
+            return t
+    elif exp_kind == "not":
+            t = Type(loc, exp_kind, read_exp(e))
+            return t
+    elif exp_kind == "integer":
+            int_constant = e.pop(0)
+            t = Type(loc, exp_kind, int_constant)
+            return t
+    elif exp_kind == "string":
+            str_constant = e.pop(0)	
+            t = Type(loc, exp_kind, str_constant)
+            return t
+    elif exp_kind == "true":
+            t = Type(loc, exp_kind, "true")
+            return t
+    elif exp_kind == "false":
+            t = Type(loc, exp_kind, "false")
+            return t
+    elif exp_kind == "identifier":
+            return read_id(e)
+    else:
+            print "Expression %s not handled in read_exp(e)" % (exp_kind)
 	
 
 def read_cmap(cmap_list):
