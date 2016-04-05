@@ -5,48 +5,33 @@
 # Separate into class_map, imp_map, parent_map, and ast
 import sys
 
-class Type:
+class Exp:
 	def __init__(self, loc=None, exp_kind=None, exp=None):
-		if exp_kind is not None:
-			self.exp_kind = exp_kind
-		else:
-			self.exp_kind = "###"
-		if loc is not None:
-			self.loc = loc
-		else:
-			self.loc = "###"
-		if exp is not None:
-			self.exp = exp
-		else:
-			self.exp = "###"
-	
-	# def __str__(self):
-	# 	if self.exp_kind == "integer":
-	# 		return "Integer(%s)" % (str(self.exp))
-	# 	else:
-	# 		return "exp not handled in to string"
+		self.loc = loc
+		self.exp_kind = exp_kind
+		self.exp = exp
 
 	def __repr__(self):
-                if self.exp_kind == "isvoid":
-                    return "IsVoid(%s)" % (str(self.exp))
-                elif self.exp_kind == "lt":
-                    return "Lt(%s)" % (str(self.exp))
-                elif self.exp_kind == "le":
-                    return "Le(%s)" % (str(self.exp))
-                elif self.exp_kind == "eq":
-                    return "Eq(%s)" % (str(self.exp))
-                elif self.exp_kind == "times":
-                    return "Times(%s)" % (str(self.exp))
-                elif self.exp_kind == "divide":
-                    return "Divide(%s)" % (str(self.exp))
-                elif self.exp_kind == "minus":
-                    return "Minus(%s)" % (str(self.exp))
+		if self.exp_kind == "isvoid":
+			return "IsVoid(%s)" % (str(self.exp))
+		elif self.exp_kind == "lt":
+			return "Lt(%s)" % (str(self.exp))
+		elif self.exp_kind == "le":
+			return "Le(%s)" % (str(self.exp))
+		elif self.exp_kind == "negate":
+			return "Negate(%s)" % (str(self.exp))
+		elif self.exp_kind == "eq":
+			return "Eq(%s)" % (str(self.exp))
+		elif self.exp_kind == "times":
+			return "Times(%s)" % (str(self.exp))
+		elif self.exp_kind == "divide":
+			return "Divide(%s)" % (str(self.exp))
+		elif self.exp_kind == "minus":
+			return "Minus(%s)" % (str(self.exp))
 		elif self.exp_kind == "plus":
 		    return "Plus(%s)" % (str(self.exp))
 		elif self.exp_kind == "not":
 	    	    return "Not(%s)" % (str(self.exp))
-                elif self.exp_kind == "negate":
-                    return "Negate(%s)" % (str(self.exp)) 
 		elif self.exp_kind == "integer":
 		    return "Integer(%s)" % (str(self.exp))
 		elif self.exp_kind == "string":
@@ -136,12 +121,13 @@ io_pmap = io_pmap[0:split_pos]
 # Serialize the class_map
 class_map = {}
 def read_exp_list(e):
+	pass
      
 
 def read_id(e):
     idloc = e.pop(0)
     idname = e.pop(0)
-    t = Type(idloc, "identifier", idname)
+    t = Exp(idloc, "identifier", idname)
     return t
 
 
@@ -154,32 +140,32 @@ def read_exp(e):
     if exp_kind == "new":
         return read_id(e) 
     elif exp_kind == "isvoid":
-        t = Type(loc, exp_kind, read_exp(e)) 
+        t = Exp(loc, exp_kind, read_exp(e)) 
         return t
     elif exp_kind == "negate":
-        t = Type(loc, exp_kind, read_exp(e))
+        t = Exp(loc, exp_kind, read_exp(e))
         return t
     elif exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
             first_exp = read_exp(e)
             second_exp = read_exp(e)
-            t = Type(loc, exp_kind, [first_exp, second_exp])
+            t = Exp(loc, exp_kind, [first_exp, second_exp])
             return t
     elif exp_kind == "not":
-            t = Type(loc, exp_kind, read_exp(e))
+            t = Exp(loc, exp_kind, read_exp(e))
             return t
     elif exp_kind == "integer":
             int_constant = e.pop(0)
-            t = Type(loc, exp_kind, int_constant)
+            t = Exp(loc, exp_kind, int_constant)
             return t
     elif exp_kind == "string":
             str_constant = e.pop(0)	
-            t = Type(loc, exp_kind, str_constant)
+            t = Exp(loc, exp_kind, str_constant)
             return t
     elif exp_kind == "true":
-            t = Type(loc, exp_kind, "true")
+            t = Exp(loc, exp_kind, "true")
             return t
     elif exp_kind == "false":
-            t = Type(loc, exp_kind, "false")
+            t = Exp(loc, exp_kind, "false")
             return t
     elif exp_kind == "identifier":
             return read_id(e)
