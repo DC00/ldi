@@ -45,14 +45,6 @@ class Exp:
 		else:
 		    return "exp not handled in to string"
 
-	def des(self):
-		if self.exp_kind == "true" or self.exp_kind == "false":
-			print "%s\n%s" % (self.loc, self.exp)
-		else:
-			print "%s\n%s\n%s" % (self.loc, self.exp_kind, self.exp)
-
-	
-
 # Helper functions
 def print_list(a):
 	for elt in a:
@@ -120,9 +112,10 @@ io_pmap = io_pmap[0:split_pos]
 
 # Serialize the class_map
 class_map = {}
-def read_exp_list(e):
-	pass
-     
+# li : remaining part of class-map
+# helper : function
+def read_exp_list(read_helper,lst):
+	[read_helper(x) for x in lst]
 
 def read_id(e):
     idloc = e.pop(0)
@@ -139,6 +132,8 @@ def read_exp(e):
     exp_kind = e.pop(0)
     if exp_kind == "new":
         return read_id(e) 
+	elif exp_kind == "self_dispatch":
+		t = Exp(loc, exp_kind, read_exp_list(read_exp,e))		
     elif exp_kind == "isvoid":
         t = Exp(loc, exp_kind, read_exp(e)) 
         return t
@@ -146,31 +141,32 @@ def read_exp(e):
         t = Exp(loc, exp_kind, read_exp(e))
         return t
     elif exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
-            first_exp = read_exp(e)
-            second_exp = read_exp(e)
-            t = Exp(loc, exp_kind, [first_exp, second_exp])
-            return t
+		first_exp = read_exp(e)
+		second_exp = read_exp(e)
+		t = Exp(loc, exp_kind, [first_exp, second_exp])
+		return t
     elif exp_kind == "not":
-            t = Exp(loc, exp_kind, read_exp(e))
-            return t
+		t = Exp(loc, exp_kind, read_exp(e))
+		return t
     elif exp_kind == "integer":
-            int_constant = e.pop(0)
-            t = Exp(loc, exp_kind, int_constant)
-            return t
+		int_constant = e.pop(0)
+		t = Exp(loc, exp_kind, int_constant)
+		return t
     elif exp_kind == "string":
-            str_constant = e.pop(0)	
-            t = Exp(loc, exp_kind, str_constant)
-            return t
+		str_constant = e.pop(0)	
+		t = Exp(loc, exp_kind, str_constant)
+		return t
     elif exp_kind == "true":
-            t = Exp(loc, exp_kind, "true")
-            return t
+		t = Exp(loc, exp_kind, "true")
+		return t
     elif exp_kind == "false":
-            t = Exp(loc, exp_kind, "false")
-            return t
+		t = Exp(loc, exp_kind, "false")
+		return t
     elif exp_kind == "identifier":
-            return read_id(e)
+		return read_id(e)
+			
     else:
-            print "Expression %s not handled in read_exp(e)" % (exp_kind)
+		print "Expression %s not handled in read_exp(e)" % (exp_kind)
 	
 
 def read_cmap(cmap_list):
@@ -196,7 +192,7 @@ def read_cmap(cmap_list):
 			print "ValueError, messed up somewhere in read_cmap"
 
 
-def deserialize_cmap():
+def serialize_cmap():
  	global class_map
  	keys = class_map.keys()
  	keys.sort()
