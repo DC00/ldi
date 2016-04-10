@@ -29,21 +29,21 @@ class Exp:
 		elif self.exp_kind == "minus":
 			return "Minus(%s)" % (str(self.exp))
 		elif self.exp_kind == "plus":
-		    return "Plus(%s)" % (str(self.exp))
+			return "Plus(%s)" % (str(self.exp))
 		elif self.exp_kind == "not":
-	    	    return "Not(%s)" % (str(self.exp))
+				return "Not(%s)" % (str(self.exp))
 		elif self.exp_kind == "integer":
-		    return "Integer(%s)" % (str(self.exp))
+			return "Integer(%s)" % (str(self.exp))
 		elif self.exp_kind == "string":
-		    return "String(%s)" % (str(self.exp))
+			return "String(%s)" % (str(self.exp))
 		elif self.exp_kind == "true":
-		    return "Bool(%s)" % (str(self.exp))
+			return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "false":
-		    return "Bool(%s)" % (str(self.exp))
+			return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "identifier":
-		    return "ID(%s)" % (str(self.exp))
+			return "ID(%s)" % (str(self.exp))
 		else:
-		    return "exp not handled in to string"
+			return "exp not handled in to string"
 
 # Helper functions
 def print_list(a):
@@ -51,11 +51,11 @@ def print_list(a):
 		print elt
 
 def is_int(n):
-    try:
-        int(n)
-        return True
-    except ValueError:
-        return False
+	try:
+		int(n)
+		return True
+	except ValueError:
+		return False
 
 def print_map(hmap):
 	for k in hmap:
@@ -102,7 +102,7 @@ int_count = 0
 split_pos = 0
 for inx, line in enumerate(io_pmap):
 	if is_int(line):
-		int_count += 1	
+		int_count += 1  
 	if int_count > 1:
 		split_pos = inx
 		break
@@ -118,54 +118,54 @@ def read_exp_list(read_helper,lst):
 	[read_helper(x) for x in lst]
 
 def read_id(e):
-    idloc = e.pop(0)
-    idname = e.pop(0)
-    t = Exp(idloc, "identifier", idname)
-    return t
+	idloc = e.pop(0)
+	idname = e.pop(0)
+	t = Exp(idloc, "identifier", idname)
+	return t
 
 
 def read_exp(e):
-    # Know that we need to read an exp
-    # return a tuple (loc, exp_kind, exp subparts)
-    # recurse on the subparts
-    loc = e.pop(0)
-    exp_kind = e.pop(0)
-    if exp_kind == "new":
-        return read_id(e) 
+	# Know that we need to read an exp
+	# return a tuple (loc, exp_kind, exp subparts)
+	# recurse on the subparts
+	loc = e.pop(0)
+	exp_kind = e.pop(0)
+	if exp_kind == "new":
+		return read_id(e) 
 	elif exp_kind == "self_dispatch":
-		t = Exp(loc, exp_kind, read_exp_list(read_exp,e))		
-    elif exp_kind == "isvoid":
-        t = Exp(loc, exp_kind, read_exp(e)) 
-        return t
-    elif exp_kind == "negate":
-        t = Exp(loc, exp_kind, read_exp(e))
-        return t
-    elif exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
+		t = Exp(loc, exp_kind, read_exp_list(read_exp,e))       
+	elif exp_kind == "isvoid":
+		t = Exp(loc, exp_kind, read_exp(e)) 
+		return t
+	elif exp_kind == "negate":
+		t = Exp(loc, exp_kind, read_exp(e))
+		return t
+	elif exp_kind in ["plus", "minus", "times", "divide", "lt", "le", "eq"]:
 		first_exp = read_exp(e)
 		second_exp = read_exp(e)
 		t = Exp(loc, exp_kind, [first_exp, second_exp])
 		return t
-    elif exp_kind == "not":
+	elif exp_kind == "not":
 		t = Exp(loc, exp_kind, read_exp(e))
 		return t
-    elif exp_kind == "integer":
+	elif exp_kind == "integer":
 		int_constant = e.pop(0)
 		t = Exp(loc, exp_kind, int_constant)
 		return t
-    elif exp_kind == "string":
-		str_constant = e.pop(0)	
+	elif exp_kind == "string":
+		str_constant = e.pop(0) 
 		t = Exp(loc, exp_kind, str_constant)
 		return t
-    elif exp_kind == "true":
+	elif exp_kind == "true":
 		t = Exp(loc, exp_kind, "true")
 		return t
-    elif exp_kind == "false":
+	elif exp_kind == "false":
 		t = Exp(loc, exp_kind, "false")
 		return t
-    elif exp_kind == "identifier":
+	elif exp_kind == "identifier":
 		return read_id(e)
 			
-    else:
+	else:
 		print "Expression %s not handled in read_exp(e)" % (exp_kind)
 	
 
@@ -184,7 +184,7 @@ def read_cmap(cmap_list):
 				attr_exp = []
 				if initialize == "initializer":
 					attr_exp.append(read_exp(cmap_list))
-				attrs.append((attr_name, attr_type, attr_exp))	
+				attrs.append((attr_name, attr_type, attr_exp))  
 				num_attrs -= 1
 			num_classes -= 1
 			class_map[cname] = attrs
@@ -193,22 +193,22 @@ def read_cmap(cmap_list):
 
 
 def serialize_cmap():
- 	global class_map
- 	keys = class_map.keys()
- 	keys.sort()
- 	print "class_map"
- 	print len(keys)
- 	
- 	# Print name and number of attrs in each class
- 	for k in keys:
- 		num_attrs = len(class_map[k])
- 		print k
- 		print num_attrs
- 		if num_attrs > 0:
- 			for attr in class_map[k]:
+	global class_map
+	keys = class_map.keys()
+	keys.sort()
+	print "class_map"
+	print len(keys)
+	
+	# Print name and number of attrs in each class
+	for k in keys:
+		num_attrs = len(class_map[k])
+		print k
+		print num_attrs
+		if num_attrs > 0:
+			for attr in class_map[k]:
 				attr_name = attr[0]
 				attr_type = attr[1]
- 				init_list = attr[2]
+				init_list = attr[2]
 				if len(init_list) > 0:
 					print "initializer"
 					print attr_name
@@ -224,13 +224,3 @@ def serialize_cmap():
 read_cmap(io_cmap[1:])
 print_map(class_map)
 # deserialize_cmap()
-
-
-	
-
-
-
-
-
-
-
