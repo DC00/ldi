@@ -14,6 +14,8 @@ class Exp:
 	def __repr__(self):
 		if self.exp_kind == "isvoid":
 			return "IsVoid(%s)" % (str(self.exp))
+		elif self.exp_kind == "self_dispatch":
+			return "Self_Dispatch(%s)" % (str(self.exp))
 		elif self.exp_kind == "lt":
 			return "Lt(%s)" % (str(self.exp))
 		elif self.exp_kind == "le":
@@ -114,8 +116,12 @@ io_pmap = io_pmap[0:split_pos]
 class_map = {}
 # li : remaining part of class-map
 # helper : function
-def read_exp_list(read_helper,lst):
-	[read_helper(x) for x in lst]
+def read_exp_list(func,num):
+	ret_list = []
+	for i in range(num):
+		ret_list.append(func)
+	return ret_list
+
 
 def read_id(e):
 	idloc = e.pop(0)
@@ -133,7 +139,7 @@ def read_exp(e):
 	if exp_kind == "new":
 		return read_id(e) 
 	elif exp_kind == "self_dispatch":
-		t = Exp(loc, exp_kind, read_exp_list(read_exp,e))       
+		t = Exp(loc, exp_kind, read_exp_list(read_exp(e),e))
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
 		return t
