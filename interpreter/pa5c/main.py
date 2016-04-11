@@ -44,9 +44,18 @@ class Exp:
 			return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "identifier":
 			return "ID(%s)" % (str(self.exp))
+		elif self.exp_kind == "Object":
+			return "Internal_Object(%s)" % (str(self.exp))
+		elif self.exp_kind == "Int":
+			return "Internal_Int(%s)" % (str(self.exp))
+		elif self.exp_kind == "IO":
+			return "Internal_IO(%s)" % (str(self.exp))
+		elif self.exp_kind == "SELF_TYPE":
+			return "Internal_SELF_TYPE(%s)" % (str(self.exp))
+		elif self.exp_kind == "String":
+			return "Internal_String(%s)" % (str(self.exp))
 		else:
 			return "exp not handled in to string"
-			#TODO: fix Object and inherent methods appearing [0, Object, internal, Object.abort]
 
 # Helper functions
 def print_list(a):
@@ -113,7 +122,7 @@ for inx, line in enumerate(io_pmap):
 io_ast = io_pmap[split_pos:]
 io_pmap = io_pmap[0:split_pos]
 
-# Serialize the class_map
+# Deerialize the class_map
 class_map = {}
 imp_map = {}
 # li : remaining part of class-map
@@ -131,13 +140,29 @@ def read_id(e):
 	t = Exp(idloc, "identifier", idname)
 	return t
 
+def read_internal_exp(e):
+	loc = e.pop(0)  # loc is always 0
+	exp_kind = e.pop(0)
+	internal = e.pop(0)
+	exp_body = e.pop(0)	# e.g. Object.abort  IO.in_int. See PA4 AST third bullet
+	t = Exp(loc, exp_kind, exp_body)
+	return t
 
 def read_exp(e):
 	# Know that we need to read an exp
 	# return a tuple (loc, exp_kind, exp subparts)
 	# recurse on the subparts
-	loc = e.pop(0)
-	exp_kind = e.pop(0)
+
+	# Test if annotated expression. Types are always capitalized
+	if e[1][0].isupper():
+		loc = e.pop(0)
+		exp_type = e.pop(0)
+		exp_kind = e.pop(0)
+	else:	
+		loc = e.pop(0)
+		exp_kind = e.pop(0)
+
+	# Read expressions based on exp_kind
 	if exp_kind == "new":
 		return read_id(e) 
 	elif exp_kind == "self_dispatch":
@@ -175,8 +200,7 @@ def read_exp(e):
 		t = Exp(loc, exp_kind, "false")
 		return t
 	elif exp_kind == "identifier":
-		return read_id(e)
-			
+		return read_id(e)		
 	else:
 		print "Expression %s not handled in read_exp(e)" % (exp_kind)
 	
@@ -215,17 +239,32 @@ def read_impmap(imap):
 				num_of_formals = int(imap.pop(0))
 				formal_list = [imap.pop(0) for i in range(num_of_formals)]	
 				parent_class = imap.pop(0)
-				print(imap)
-				body_exp = read_exp(imap)
-				imp_map[(class_name,method_name)] = (formal_list,body_exp)
+				
+				# Check if internal method
+				# Contents of imap if internal
+				# 0				imap[0]
+				# Object		imap[1]
+				# internal		imap[2]
+				# Object.abort	imap[3]
+				if imap[2] == "internal":
+					body_exp = read_internal_exp(imap)
+				else:
+					body_exp = read_exp(imap)
+
+			imp_map[(class_name,method_name)] = (formal_list,body_exp)
 			num_classes -= 1
 		except ValueError:
-			print "ValueError, messed up in read_impmap"
-	
+			print "ValueError, messed up while reading the lines from imp map"
 
-#read_cmap(io_cmap[1:])
+read_cmap(io_cmap[1:])
+print "CLASS_MAP"
+print_map(class_map)
+
+print "IMP_MAP"
 read_impmap(io_imap[1:])
-#print("CLASS_MAP")
-#print_map(class_map)
-print("IMP_MAP")
 print_map(imp_map)
+
+
+
+
+
