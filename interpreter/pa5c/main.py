@@ -251,7 +251,7 @@ def read_impmap(imap):
 				else:
 					body_exp = read_exp(imap)
 
-			imp_map[(class_name,method_name)] = (formal_list,body_exp)
+				imp_map[(class_name,method_name)] = (formal_list,body_exp)
 			num_classes -= 1
 		except ValueError:
 			print "ValueError, messed up while reading the lines from imp map"
@@ -263,6 +263,25 @@ print_map(class_map)
 print "IMP_MAP"
 read_impmap(io_imap[1:])
 print_map(imp_map)
+
+
+# Environment, Store, and Values
+# Environment is a list of tuples
+# e.g. x lives at address 33 and y lives address 7
+# [ ('x', 33), ('y', 7) ]
+env = []
+
+# Store is a dictionary that maps addresses to their values
+# e.g. 
+store = {}
+
+
+
+
+
+
+
+
 
 
 
