@@ -1,6 +1,9 @@
 #!/bin/bash
-if [ -e hello-world.cl-type ]; then
-    rm hello-world.cl-type
+TEST_FILE=$1
+if [ -e $1-type ]; then
+    rm $1-type
 fi
-cool --class-map hello-world.cl
-python main.py hello-world.cl-type
+cool --class-map $1
+python main.py $1-type > output
+# python main.py $1-type
+vimdiff $1-type output
