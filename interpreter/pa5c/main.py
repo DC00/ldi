@@ -46,6 +46,7 @@ class Exp:
 			return "ID(%s)" % (str(self.exp))
 		else:
 			return "exp not handled in to string"
+			#TODO: fix Object and inherent methods appearing [0, Object, internal, Object.abort]
 
 # Helper functions
 def print_list(a):
@@ -114,6 +115,7 @@ io_pmap = io_pmap[0:split_pos]
 
 # Serialize the class_map
 class_map = {}
+imp_map = {}
 # li : remaining part of class-map
 # helper : function
 def read_exp_list(func,num):
@@ -139,7 +141,11 @@ def read_exp(e):
 	if exp_kind == "new":
 		return read_id(e) 
 	elif exp_kind == "self_dispatch":
-		t = Exp(loc, exp_kind, read_exp_list(read_exp(e),e))
+	# WE MIGHT NEED THE METHOD IDENTIFIER
+		read_id(e)
+		num_of_args = int(e.pop(0))
+		t = Exp(loc, exp_kind, read_exp_list(read_exp(e),num_of_args))
+		return t
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
 		return t
@@ -197,36 +203,29 @@ def read_cmap(cmap_list):
 		except ValueError:
 			print "ValueError, messed up somewhere in read_cmap"
 
-
-def serialize_cmap():
-	global class_map
-	keys = class_map.keys()
-	keys.sort()
-	print "class_map"
-	print len(keys)
+# key: (class name, method name) value: (formals list, method body)
+def read_impmap(imap):
+	num_classes = int(imap.pop(0))
+	while num_classes > 0:
+		try:
+			class_name = imap.pop(0)
+			num_of_methods = int(imap.pop(0))
+			for i in range(num_of_methods):
+				method_name = imap.pop(0)
+				num_of_formals = int(imap.pop(0))
+				formal_list = [imap.pop(0) for i in range(num_of_formals)]	
+				parent_class = imap.pop(0)
+				print(imap)
+				body_exp = read_exp(imap)
+				imp_map[(class_name,method_name)] = (formal_list,body_exp)
+			num_classes -= 1
+		except ValueError:
+			print "ValueError, messed up in read_impmap"
 	
-	# Print name and number of attrs in each class
-	for k in keys:
-		num_attrs = len(class_map[k])
-		print k
-		print num_attrs
-		if num_attrs > 0:
-			for attr in class_map[k]:
-				attr_name = attr[0]
-				attr_type = attr[1]
-				init_list = attr[2]
-				if len(init_list) > 0:
-					print "initializer"
-					print attr_name
-					print attr_type
-					for initialized_element in init_list:
-						initialized_element.des()
-				else:
-					print "no_initializer"
-					print attr_name
-					print attr_type
-			
 
-read_cmap(io_cmap[1:])
-print_map(class_map)
-# deserialize_cmap()
+#read_cmap(io_cmap[1:])
+read_impmap(io_imap[1:])
+#print("CLASS_MAP")
+#print_map(class_map)
+print("IMP_MAP")
+print_map(imp_map)
