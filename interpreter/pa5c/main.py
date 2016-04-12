@@ -71,15 +71,13 @@ def is_int(n):
 
 # Debugging and Tracing
 do_debug = True
-global index_count
+global indent_count
 indent_count = 0
 def debug_indent(e):
 	global indent_count
 	if do_debug:
 		for i in range(indent_count):
-			# That's a tab
 			print "	",
-		print e
 
 def print_map(hmap):
 	for k in hmap:
@@ -288,4 +286,35 @@ env = []
 # e.g. 
 store = {}
 
+new_location_counter = 1000
+def newloc():
+	new_location_counter += 1	
+	return new_location_counter
 
+# should return the result value * updated store
+def eval(self_object,store,env,exp):
+	
+	indent_count += 2
+	debug_indent()
+	print "eval: %s\n" % (exp)
+	debug_indent()
+	print "env = %s\n" % (self_object)
+	debug_indent()
+	print "sto = %s\n" % (store)
+	debug_indent()
+	print "env = %s\n" % (env)
+
+	if exp.exp_kind == "new":
+	elif exp.exp_kind == "self_dispatch":
+	elif exp.exp_kind == "isvoid":
+	elif exp.exp_kind == "negate":
+	elif exp.exp_kind == "plus": #need other operations
+	elif exp.exp_kind == "not":
+	elif exp.exp_kind == "integer":
+	elif exp.exp_kind == "string":
+	elif exp.exp_kind == "true":
+	elif exp.exp_kind == "false":
+	elif exp.exp_kind == "identifier":
+	else:
+		print "Expression %s not handled" % (exp.exp_kind)
+		
