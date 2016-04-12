@@ -69,10 +69,23 @@ def is_int(n):
 	except ValueError:
 		return False
 
+# Debugging and Tracing
+do_debug = True
+global index_count
+indent_count = 0
+def debug_indent(e):
+	global indent_count
+	if do_debug:
+		for i in range(indent_count):
+			# That's a tab
+			print "	",
+		print e
+
 def print_map(hmap):
 	for k in hmap:
 		for v in hmap[k]:
 			print "%s => %s" % (k, v)
+			debug_indent(v)
 		print
 
 fname = sys.argv[1]
@@ -260,9 +273,9 @@ read_cmap(io_cmap[1:])
 print "CLASS_MAP"
 print_map(class_map)
 
-print "IMP_MAP"
-read_impmap(io_imap[1:])
-print_map(imp_map)
+# print "IMP_MAP"
+# read_impmap(io_imap[1:])
+# print_map(imp_map)
 
 
 # Environment, Store, and Values
@@ -275,13 +288,6 @@ env = []
 # e.g. 
 store = {}
 
-
-# Debugging and Tracing
-do_debug = True
-def debug(fmt):
-	result_string = ""
-	if !do_debug:
-		result_string =
 
 
 
