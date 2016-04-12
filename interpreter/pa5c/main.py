@@ -288,22 +288,4 @@ env = []
 # e.g. 
 store = {}
 
-# Debugging and Tracing
-do_debug = True
-def debug(fmt):
-	result_string = ""
-	if !do_debug:
-		result_string =
-
-
-
-
-
-
-
-
-
-
-
-
 
