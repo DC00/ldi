@@ -57,6 +57,12 @@ class Exp:
 		else:
 			return "exp not handled in to string"
 
+class CoolValue:
+	def __init__(self, value_type=None, value=None):
+		self.value_type = value_type
+		self.value = value
+		# TODO: Default values: String = "", Int = 0, Bool = false
+
 # Helper functions
 def print_list(a):
 	for elt in a:
@@ -221,7 +227,7 @@ def read_cmap(cmap_list):
 	while num_classes > 0:
 		# 0 is just for testing. Remove later
 		try:
-			attrs = [0]
+			attrs = []
 			cname = cmap_list.pop(0)
 			num_attrs = int(cmap_list.pop(0))
 			while num_attrs > 0:
@@ -271,9 +277,9 @@ read_cmap(io_cmap[1:])
 print "CLASS_MAP"
 print_map(class_map)
 
-# print "IMP_MAP"
-# read_impmap(io_imap[1:])
-# print_map(imp_map)
+print "IMP_MAP"
+read_impmap(io_imap[1:])
+print_map(imp_map)
 
 
 # Environment, Store, and Values
@@ -286,35 +292,65 @@ env = []
 # e.g. 
 store = {}
 
+# Self Object
+self_object = []
+
 new_location_counter = 1000
 def newloc():
 	new_location_counter += 1	
 	return new_location_counter
 
-# should return the result value * updated store
-def eval(self_object,store,env,exp):
-	
-	indent_count += 2
-	debug_indent()
-	print "eval: %s\n" % (exp)
-	debug_indent()
-	print "env = %s\n" % (self_object)
-	debug_indent()
-	print "sto = %s\n" % (store)
-	debug_indent()
-	print "env = %s\n" % (env)
+# Parameters:
+# 	so		: self object
+# 	store 	: store maps addresses to values
+#	env		: environment maps variables to addresses
+#	e		: the expression to evaluate
+#
+# Return Value:
+#	(new_value, updated_store)
 
+main_class = class_map['Main']
+my_exp = main_class[0][2][0]
+print "my_exp: %s" % (my_exp)
+
+# [Plus([Integer(999), Integer(888)])]
+
+def eval(self_object,store,environment,exp):
 	if exp.exp_kind == "new":
+		pass
 	elif exp.exp_kind == "self_dispatch":
+		pass
 	elif exp.exp_kind == "isvoid":
+		pass
 	elif exp.exp_kind == "negate":
+		pass
 	elif exp.exp_kind == "plus": #need other operations
+		# Get each integer from plus expression
+		e1 = my_exp.exp[0]
+		e2 = my_exp.exp[1]
+		print "e1: %s" % (e1)
+		print "e2: %s" % (e2)
+		v1, s2 = eval(self_object,store,environment,e1)
+		v2, s3 = eval(self_object,store,environment,e2)
+		new_value = v1.value + v2.value
+		return (CoolValue("Int", new_value), store)
 	elif exp.exp_kind == "not":
+		pass
 	elif exp.exp_kind == "integer":
+		print "in int"
+		value = int(exp.exp)
+		print value
+		return (CoolValue("Int", value), store)
 	elif exp.exp_kind == "string":
+		pass
 	elif exp.exp_kind == "true":
+		pass
 	elif exp.exp_kind == "false":
+		pass
 	elif exp.exp_kind == "identifier":
+		pass
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
 		
+(new_value, new_store) = eval(self_object, store, env, my_exp)
+print new_value.value
