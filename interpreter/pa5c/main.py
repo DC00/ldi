@@ -435,11 +435,8 @@ def eval(self_object,store,environment,exp):
 		pass
 	elif exp.exp_kind == "plus": #need other operations
 		# Get each integer from plus expression
-		print "exp.exp: %s" % (my_exp.exp)
 		e1 = exp.exp[0]
 		e2 = exp.exp[1]
-		print "e1: %s" % (e1)
-		print "e2: %s" % (e2)
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value + v2.value
