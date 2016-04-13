@@ -14,8 +14,6 @@ class Exp:
 	def __repr__(self):
 		if self.exp_kind == "isvoid":
 			return "IsVoid(%s)" % (str(self.exp))
-		elif self.exp_kind == "self_dispatch":
-			return "Self_Dispatch(%s)" % (str(self.exp))
 		elif self.exp_kind == "lt":
 			return "Lt(%s)" % (str(self.exp))
 		elif self.exp_kind == "le":
@@ -33,7 +31,7 @@ class Exp:
 		elif self.exp_kind == "plus":
 			return "Plus(%s)" % (str(self.exp))
 		elif self.exp_kind == "not":
-				return "Not(%s)" % (str(self.exp))
+			return "Not(%s)" % (str(self.exp))
 		elif self.exp_kind == "integer":
 			return "Integer(%s)" % (str(self.exp))
 		elif self.exp_kind == "string":
@@ -57,11 +55,51 @@ class Exp:
 		else:
 			return "exp not handled in to string"
 
+#TODO: do for every other expression that is a bitch
+class Assign(Exp):
+	def __init__(self, loc=None, var=None, exp=None):
+		Exp.__init__(self,loc,"assign",exp)
+		self.var = var
+	def __repr__(self):
+		return "Assign(%s,%s)" % (self.var,self.exp)
+
+class Self_Dispatch(Exp):
+	def __init__(self, loc=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"self_dispatch",exp) 
+		self.fname = fname
+	def __repr__(self):
+		return "Self_Dispatch(%s,%s)" % (self.fname,self.exp)
+		
 class CoolValue:
 	def __init__(self, value_type=None, value=None):
 		self.value_type = value_type
 		self.value = value
 		# TODO: Default values: String = "", Int = 0, Bool = false
+class CoolInt(CoolValue):
+	def __init__(self, value=0):
+		CoolValue.__init__(self,"Int", value)
+	def __repr__(self):
+		return "CoolInt(%s)" % (self.value)
+
+class CoolString(CoolValue):
+	def __init__(self, value="", length=0):
+		CoolValue.__init__(self,"String",value)
+		self.length = length
+	def __repr__(self):
+		return "CoolString(%s)" % (self.value)
+
+class CoolBool(CoolValue):
+	def __init__(self, value="false"):
+		CoolValue.__init__(self,"Bool",value)
+	def __repr__(self):
+		return "CoolBool(%s)" % (self.value)
+
+class CoolObject:
+	def __init__(self, cname=None, attr_and_locs={}):
+		self.cname = cname
+		self.attr_and_locs = attr_and_locs
+	
+#TODO: Cool_Object and Void
 
 # Helper functions
 def print_list(a):
@@ -103,6 +141,7 @@ with open(fname, 'r') as fin:
 io_cmap = []
 io_imap = []
 io_pmap = []
+#TODO: Do we find this useful for any case? LUB?
 io_ast  = []
 
 in_cmap = True
@@ -180,13 +219,18 @@ def read_exp(e):
 		exp_kind = e.pop(0)
 
 	# Read expressions based on exp_kind
-	if exp_kind == "new":
+	if exp_kind == "assign":
+		var = read_id(e)
+		t = Assign(loc,var.exp,read_exp(e))
+		return t
+	elif exp_kind == "new":
 		return read_id(e) 
 	elif exp_kind == "self_dispatch":
 	# WE MIGHT NEED THE METHOD IDENTIFIER
-		read_id(e)
+		funcid = read_id(e)
+		fname = funcid.exp
 		num_of_args = int(e.pop(0))
-		t = Exp(loc, exp_kind, read_exp_list(read_exp(e),num_of_args))
+		t = Self_Dispatch(loc, fname, read_exp_list(read_exp(e),num_of_args))
 		return t
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
@@ -282,18 +326,6 @@ read_impmap(io_imap[1:])
 print_map(imp_map)
 
 
-# Environment, Store, and Values
-# Environment is a list of tuples
-# e.g. x lives at address 33 and y lives address 7
-# [ ('x', 33), ('y', 7) ]
-env = []
-
-# Store is a dictionary that maps addresses to their values
-# e.g. 
-store = {}
-
-# Self Object
-self_object = []
 
 new_location_counter = 1000
 def newloc():
@@ -310,15 +342,50 @@ def newloc():
 #	(new_value, updated_store)
 
 main_class = class_map['Main']
-my_exp = main_class[0][2][0]
+main_imp = imp_map[('Main','main')]
+my_exp = main_imp[1]
 print "my_exp: %s" % (my_exp)
 
-# [Plus([Integer(999), Integer(888)])]
-
 def eval(self_object,store,environment,exp):
-	if exp.exp_kind == "new":
+	if exp.exp_kind == "assign":
+	# loc, var, exp
+		(v1,s2) = eval(self_object,store,environment,exp.exp)	
+		l1 = environment[exp.var]	
+		del s2[l1] 
+		s3 = s2
+		s3[l1] = v1
+		return (v1,s3)
+	elif exp.exp_kind == "new":
+		cname = exp.exp
+		attrs_and_inits = class_map[cname]
+		new_attrs_locs = [newloc() for x in attrs_and_inits]
+
+			
+			
+		# need assign
+		# get class
+			
 		pass
 	elif exp.exp_kind == "self_dispatch":
+	# self_dispatch = loc, exp_kind, fname, exp = [args] 
+		# Evaluate arguments IN ORDER
+		current_store = store
+		arg_values = []
+		for arg in exp.exp:
+			(new_value, new_store) = eval(self_object,store,environment,arg)
+			current_store = new_store	
+			arg_values.append(new_value)	
+
+		# Evaluate Receiver Object (for self, it's just the self_object)
+		
+		(v0,s_nplus2) = eval(self_object,current_store,environment,e0)
+
+		# Look up things in implementation map
+		# v0 should be a CoolObject with the name of class and attrs_and_locs			
+		# TODO: if it's not in there what happens? WELLLLLLLLL	
+		(formals, body) = imp_map[v0[0],fname]
+		# TODO: Incomplete, working on new
+
 		pass
 	elif exp.exp_kind == "isvoid":
 		pass
@@ -333,15 +400,16 @@ def eval(self_object,store,environment,exp):
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value + v2.value
-		return (CoolValue("Int", new_value), store)
+		return (CoolInt(new_value), store)
 	elif exp.exp_kind == "not":
 		pass
 	elif exp.exp_kind == "integer":
-		print "in int"
 		value = int(exp.exp)
-		print value
-		return (CoolValue("Int", value), store)
+		return (CoolInt(value), store)
 	elif exp.exp_kind == "string":
+		value = str(exp.exp)
+		length = len(value)
+		return (CoolString(value,length), store)
 		pass
 	elif exp.exp_kind == "true":
 		pass
@@ -351,6 +419,32 @@ def eval(self_object,store,environment,exp):
 		pass
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
+
+# ----------MAIN----------
 		
+# Environment, Store, and Values
+# Environment is a list of tuples
+# e.g. x lives at address 33 and y lives address 7
+# [ ('x', 33), ('y', 7) ]
+env = {}
+# Store is a dictionary that maps addresses to their values
+# e.g. 
+store = {}
+# Self Object
+self_object = []
 (new_value, new_store) = eval(self_object, store, env, my_exp)
 print new_value.value
+
+# self would be nothing at this point
+#eval self store env (new Main).main() 
+#new Main becomes the self object
+
+
+
+
+
+
+
+
+
+
