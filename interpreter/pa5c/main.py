@@ -117,17 +117,19 @@ def is_int(n):
 do_debug = True
 global indent_count
 indent_count = 0
-def debug_indent(e):
+def debug_indent():
 	global indent_count
 	if do_debug:
 		for i in range(indent_count):
-			print "	",
+			print " ",
+
+def debug(e):
+	print "%s" % (e)
 
 def print_map(hmap):
 	for k in hmap:
 		for v in hmap[k]:
-			print "%s => %s" % (k, v)
-			debug_indent(v)
+			print "%s -> %s" % (k, v)
 		print
 
 fname = sys.argv[1]
@@ -347,6 +349,14 @@ my_exp = main_imp[1]
 print "my_exp: %s" % (my_exp)
 
 def eval(self_object,store,environment,exp):
+	global indent_count
+	indent_count += 2
+	debug_indent() ; debug("eval: %s" % (exp))
+	debug_indent() ; debug("so    = %s" % (self_object))
+	debug_indent() ; debug("store = %s" % (store))
+	debug_indent() ; debug("env   = %s" % (environment))
+
+
 	if exp.exp_kind == "assign":
 	# loc, var, exp
 		(v1,s2) = eval(self_object,store,environment,exp.exp)	
@@ -354,6 +364,9 @@ def eval(self_object,store,environment,exp):
 		del s2[l1] 
 		s3 = s2
 		s3[l1] = v1
+		debug_indent() ; debug("ret = %s\n" % (v1))
+		debug_indent() ; debug("rets = %s\n" % (s3))
+		indent_count -= 2
 		return (v1,s3)
 	elif exp.exp_kind == "new":
 		cname = exp.exp
@@ -400,17 +413,25 @@ def eval(self_object,store,environment,exp):
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value + v2.value
+		debug_indent() ; debug("ret = %s" % (new_value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
 		return (CoolInt(new_value), store)
 	elif exp.exp_kind == "not":
 		pass
 	elif exp.exp_kind == "integer":
 		value = int(exp.exp)
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
 		return (CoolInt(value), store)
 	elif exp.exp_kind == "string":
 		value = str(exp.exp)
 		length = len(value)
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
 		return (CoolString(value,length), store)
-		pass
 	elif exp.exp_kind == "true":
 		pass
 	elif exp.exp_kind == "false":
@@ -421,7 +442,7 @@ def eval(self_object,store,environment,exp):
 		print "Expression %s not handled" % (exp.exp_kind)
 
 # ----------MAIN----------
-		
+	
 # Environment, Store, and Values
 # Environment is a list of tuples
 # e.g. x lives at address 33 and y lives address 7
