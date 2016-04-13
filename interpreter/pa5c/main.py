@@ -12,7 +12,9 @@ class Exp:
 		self.exp = exp
 
 	def __repr__(self):
-		if self.exp_kind == "isvoid":
+		if self.exp_kind == "new":
+			return "New(%s)" % (str(self.exp))
+		elif self.exp_kind == "isvoid":
 			return "IsVoid(%s)" % (str(self.exp))
 		elif self.exp_kind == "lt":
 			return "Lt(%s)" % (str(self.exp))
@@ -74,7 +76,7 @@ class CoolValue:
 	def __init__(self, value_type=None, value=None):
 		self.value_type = value_type
 		self.value = value
-		# TODO: Default values: String = "", Int = 0, Bool = false
+		# TODO: Default values: String = "", Int = 0, Bool = false (did we do this)
 class CoolInt(CoolValue):
 	def __init__(self, value=0):
 		CoolValue.__init__(self,"Int", value)
@@ -98,6 +100,8 @@ class CoolObject:
 	def __init__(self, cname=None, attr_and_locs={}):
 		self.cname = cname
 		self.attr_and_locs = attr_and_locs
+	def __repr__(self):
+		return "CoolObject(%s,%s)" % (self.cname,self.attr_and_locs)
 	
 #TODO: Cool_Object and Void
 
@@ -226,9 +230,10 @@ def read_exp(e):
 		t = Assign(loc,var.exp,read_exp(e))
 		return t
 	elif exp_kind == "new":
-		return read_id(e) 
+		id_ver = read_id(e) 
+		t = Exp(id_ver.loc, exp_kind, id_ver.exp)
+		return t
 	elif exp_kind == "self_dispatch":
-	# WE MIGHT NEED THE METHOD IDENTIFIER
 		funcid = read_id(e)
 		fname = funcid.exp
 		num_of_args = int(e.pop(0))
@@ -327,12 +332,21 @@ print "IMP_MAP"
 read_impmap(io_imap[1:])
 print_map(imp_map)
 
-
-
 new_location_counter = 1000
 def newloc():
+	global new_location_counter
 	new_location_counter += 1	
 	return new_location_counter
+
+def default_value(typename):
+	if typename == "Int":
+		return 0
+	elif typename == "String":
+		return ""
+	elif typename == "Bool":
+		return False
+	else:
+		return "void" #FIXME: might need Void object
 
 # Parameters:
 # 	so		: self object
@@ -345,7 +359,7 @@ def newloc():
 
 main_class = class_map['Main']
 main_imp = imp_map[('Main','main')]
-my_exp = main_imp[1]
+my_exp = main_class[0][2][0]
 print "my_exp: %s" % (my_exp)
 
 def eval(self_object,store,environment,exp):
@@ -355,30 +369,46 @@ def eval(self_object,store,environment,exp):
 	debug_indent() ; debug("so    = %s" % (self_object))
 	debug_indent() ; debug("store = %s" % (store))
 	debug_indent() ; debug("env   = %s" % (environment))
-
-
+	debug_indent() ; debug("exp = %s" % (exp))
+	debug_indent() ; debug("exp_kind   = %s" % (exp.exp_kind))
 	if exp.exp_kind == "assign":
-	# loc, var, exp
-		(v1,s2) = eval(self_object,store,environment,exp.exp)	
+		# exp.exp returns a list. select first element exp.exp[0]
+		(v1,s2) = eval(self_object,store,environment,exp.exp[0])	
 		l1 = environment[exp.var]	
-		del s2[l1] 
+		del s2[l1] #FIXME: does this delete every instance?
 		s3 = s2
 		s3[l1] = v1
-		debug_indent() ; debug("ret = %s\n" % (v1))
-		debug_indent() ; debug("rets = %s\n" % (s3))
+		debug_indent() ; debug("ret = %s" % (v1))
+		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
 		return (v1,s3)
 	elif exp.exp_kind == "new":
+		# TODO: need to deal with SELF_TYPE
 		cname = exp.exp
 		attrs_and_inits = class_map[cname]
 		new_attrs_locs = [newloc() for x in attrs_and_inits]
+		attr_names = [attr_name for (attr_name,attr_type,attr_exp) in attrs_and_inits]
+		attrs_and_locs = dict(zip(attr_names, new_attrs_locs))
+		v1 = CoolObject(cname, attrs_and_locs)
+		# iterate through key,value pairs (attrname to loc)
+		s2 = store
+		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
+		# find the attr_name in the class map
+			for (attr_name2, attr_type, attr_exp) in attrs_and_inits:
+		# get the type from it and return the default value, make the pairing
+				if attr_name == attr_name2:
+					s2[attr_loc] = default_value(attr_type)
+		final_store = s2
+		for (attr_name,_,attr_init) in attrs_and_inits:
+			if attr_init != []:
+				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init))
+				final_store = current_store
 
-			
-			
-		# need assign
-		# get class
-			
-		pass
+			# FIXME: 0 in Assign constructor might make troubles
+		debug_indent() ; debug("ret = %s" % (v1))
+		debug_indent() ; debug("rets = %s" % (final_store))
+		indent_count -= 2
+		return (v1,final_store)
 	elif exp.exp_kind == "self_dispatch":
 	# self_dispatch = loc, exp_kind, fname, exp = [args] 
 		# Evaluate arguments IN ORDER
@@ -388,17 +418,16 @@ def eval(self_object,store,environment,exp):
 			(new_value, new_store) = eval(self_object,store,environment,arg)
 			current_store = new_store	
 			arg_values.append(new_value)	
-
 		# Evaluate Receiver Object (for self, it's just the self_object)
-		
-		(v0,s_nplus2) = eval(self_object,current_store,environment,e0)
+		#(v0,s_nplus2) = eval(self_object,current_store,environment,e0)
 
 		# Look up things in implementation map
 		# v0 should be a CoolObject with the name of class and attrs_and_locs			
 		# TODO: if it's not in there what happens? WELLLLLLLLL	
-		(formals, body) = imp_map[v0[0],fname]
+		#(formals, body) = imp_map[v0[0],fname]
 		# TODO: Incomplete, working on new
-
+		pass
+	elif exp.exp_kind == "dynamic_dispatch":
 		pass
 	elif exp.exp_kind == "isvoid":
 		pass
@@ -406,8 +435,9 @@ def eval(self_object,store,environment,exp):
 		pass
 	elif exp.exp_kind == "plus": #need other operations
 		# Get each integer from plus expression
-		e1 = my_exp.exp[0]
-		e2 = my_exp.exp[1]
+		print "exp.exp: %s" % (my_exp.exp)
+		e1 = exp.exp[0]
+		e2 = exp.exp[1]
 		print "e1: %s" % (e1)
 		print "e2: %s" % (e2)
 		v1, s2 = eval(self_object,store,environment,e1)
@@ -452,9 +482,10 @@ env = {}
 # e.g. 
 store = {}
 # Self Object
-self_object = []
+self_object = None
+#my_exp = Dynamic_Dispatch((New(Main)),main)
 (new_value, new_store) = eval(self_object, store, env, my_exp)
-print new_value.value
+print new_value
 
 # self would be nothing at this point
 #eval self store env (new Main).main() 
