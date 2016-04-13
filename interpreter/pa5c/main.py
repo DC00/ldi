@@ -71,12 +71,20 @@ class Self_Dispatch(Exp):
 		self.fname = fname
 	def __repr__(self):
 		return "Self_Dispatch(%s,%s)" % (self.fname,self.exp)
+
+class Dynamic_Dispatch(Exp):
+	def __init__(self, loc=None, e=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"dynamic_dispatch",exp) 
+		self.e = e
+		self.fname = fname
+	def __repr__(self):
+		return "Dynamic_Dispatch(%s,%s,%s)" % (self.e,self.fname,self.exp)
 		
 class CoolValue:
 	def __init__(self, value_type=None, value=None):
 		self.value_type = value_type
 		self.value = value
-		# TODO: Default values: String = "", Int = 0, Bool = false (did we do this)
+
 class CoolInt(CoolValue):
 	def __init__(self, value=0):
 		CoolValue.__init__(self,"Int", value)
@@ -118,7 +126,7 @@ def is_int(n):
 		return False
 
 # Debugging and Tracing
-do_debug = True
+do_debug = False
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -128,7 +136,8 @@ def debug_indent():
 			print " ",
 
 def debug(e):
-	print "%s" % (e)
+	if do_debug:
+		print "%s" % (e)
 
 def print_map(hmap):
 	for k in hmap:
@@ -239,6 +248,13 @@ def read_exp(e):
 		num_of_args = int(e.pop(0))
 		t = Self_Dispatch(loc, fname, read_exp_list(read_exp(e),num_of_args))
 		return t
+	elif exp_kind == "dynamic_dispatch":
+		e0 = read_exp(e)
+		funcid = read_id(e)
+		fname = funcid.exp
+		num_of_args = int(e.pop(0))
+		t = Dynamic_Dispatch(loc, e0, fname, read_exp_list(read_exp(e),num_of_args))
+		return t
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
 		return t
@@ -325,12 +341,12 @@ def read_impmap(imap):
 			print "ValueError, messed up while reading the lines from imp map"
 
 read_cmap(io_cmap[1:])
-print "CLASS_MAP"
-print_map(class_map)
+#print "CLASS_MAP"
+#print_map(class_map)
 
-print "IMP_MAP"
+#print "IMP_MAP"
 read_impmap(io_imap[1:])
-print_map(imp_map)
+#print_map(imp_map)
 
 new_location_counter = 1000
 def newloc():
@@ -357,10 +373,7 @@ def default_value(typename):
 # Return Value:
 #	(new_value, updated_store)
 
-main_class = class_map['Main']
-main_imp = imp_map[('Main','main')]
-my_exp = main_class[0][2][0]
-print "my_exp: %s" % (my_exp)
+
 
 def eval(self_object,store,environment,exp):
 	global indent_count
@@ -403,32 +416,55 @@ def eval(self_object,store,environment,exp):
 			if attr_init != []:
 				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init))
 				final_store = current_store
-
 			# FIXME: 0 in Assign constructor might make troubles
+
 		debug_indent() ; debug("ret = %s" % (v1))
 		debug_indent() ; debug("rets = %s" % (final_store))
 		indent_count -= 2
 		return (v1,final_store)
 	elif exp.exp_kind == "self_dispatch":
-	# self_dispatch = loc, exp_kind, fname, exp = [args] 
-		# Evaluate arguments IN ORDER
+		self_exp = Exp(0,"identifier","self")
+		ret_exp = Dynamic_Dispatch(exp.loc,self_exp,exp.fname,exp.exp)
+		(ret_value,ret_store) = eval(self_object,store,environment,ret_exp)
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (ret_store))
+		indent_count -= 2
+		return (ret_value,ret_store)
+
+	elif exp.exp_kind == "dynamic_dispatch":
 		current_store = store
 		arg_values = []
+		# evaluate each argument and update store
 		for arg in exp.exp:
-			(new_value, new_store) = eval(self_object,store,environment,arg)
-			current_store = new_store	
-			arg_values.append(new_value)	
-		# Evaluate Receiver Object (for self, it's just the self_object)
-		#(v0,s_nplus2) = eval(self_object,current_store,environment,e0)
+			(arg_value, new_store) = eval(self_object,current_store,environment,arg)
+			current_store = new_store
+			arg_values.append(arg_value)
 
-		# Look up things in implementation map
-		# v0 should be a CoolObject with the name of class and attrs_and_locs			
-		# TODO: if it's not in there what happens? WELLLLLLLLL	
-		#(formals, body) = imp_map[v0[0],fname]
-		# TODO: Incomplete, working on new
-		pass
-	elif exp.exp_kind == "dynamic_dispatch":
-		pass
+	#ASIDE: dealing with out_string
+		if exp.fname == "out_string":
+			for value in arg_values:
+				eval (value.value)
+
+		# evaluate receiver object
+		# TODO: what if they are not in there?
+		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
+		# look into imp_map
+		(formals,body) = imp_map[(v0.cname,exp.fname)]
+		# make new locations for each of the actual arguments
+		new_arg_locs = [ newloc() for x in exp.exp]
+		# make an updated store and add new locs to arg values
+		# TODO: should put formal parameters first so that they are visible 
+		# and they shadow the attributes
+		s_nplus3 = s_nplus2
+		store_update = dict(zip(new_arg_locs, arg_values))
+		for (loc,value) in store_update.iteritems():
+			s_nplus3[loc] = value
+		(ret_value,ret_store) = eval(v0,s_nplus3,v0.attr_and_locs,body)
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (ret_store))
+		indent_count -= 2
+		return (ret_value,ret_store)
+
 	elif exp.exp_kind == "isvoid":
 		pass
 	elif exp.exp_kind == "negate":
@@ -464,7 +500,17 @@ def eval(self_object,store,environment,exp):
 	elif exp.exp_kind == "false":
 		pass
 	elif exp.exp_kind == "identifier":
-		pass
+		iden = exp.exp
+		if iden == "self":
+			return (self_object,store)
+		loc = environment[iden]
+		value = store[loc]
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (value,store)
+	elif exp.exp_kind == "SELF_TYPE":
+		return (self_object,store)
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
 
@@ -481,8 +527,10 @@ store = {}
 # Self Object
 self_object = None
 #my_exp = Dynamic_Dispatch((New(Main)),main)
+my_exp = Dynamic_Dispatch(0, Exp(0,"new", "Main"), "main", [])
+print "my_exp: %s" % (my_exp)
+
 (new_value, new_store) = eval(self_object, store, env, my_exp)
-print new_value
 
 # self would be nothing at this point
 #eval self store env (new Main).main() 
