@@ -442,8 +442,7 @@ def eval(self_object,store,environment,exp):
 
 	#ASIDE: dealing with out_string
 		if exp.fname == "out_string":
-			for value in arg_values:
-				eval (value.value)
+			print arg_values[0].value.replace("\\n","\n"),
 
 		# evaluate receiver object
 		# TODO: what if they are not in there?
@@ -528,7 +527,6 @@ store = {}
 self_object = None
 #my_exp = Dynamic_Dispatch((New(Main)),main)
 my_exp = Dynamic_Dispatch(0, Exp(0,"new", "Main"), "main", [])
-print "my_exp: %s" % (my_exp)
 
 (new_value, new_store) = eval(self_object, store, env, my_exp)
 
