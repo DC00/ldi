@@ -58,6 +58,7 @@ class Exp:
 			return "exp not handled in to string"
 
 #TODO: do for every other expression that is a bitch
+
 class Assign(Exp):
 	def __init__(self, loc=None, var=None, exp=None):
 		Exp.__init__(self,loc,"assign",exp)
@@ -79,6 +80,8 @@ class Dynamic_Dispatch(Exp):
 		self.fname = fname
 	def __repr__(self):
 		return "Dynamic_Dispatch(%s,%s,%s)" % (self.e,self.fname,self.exp)
+
+#Types of Cool Values: Objects, Ints, Bools
 		
 class CoolValue:
 	def __init__(self, value_type=None, value=None):
@@ -111,7 +114,7 @@ class CoolObject:
 	def __repr__(self):
 		return "CoolObject(%s,%s)" % (self.cname,self.attr_and_locs)
 	
-#TODO: Cool_Object and Void
+#TODO: Void
 
 # Helper functions
 def print_list(a):
@@ -385,6 +388,7 @@ def eval(self_object,store,environment,exp):
 	debug_indent() ; debug("env   = %s" % (environment))
 	debug_indent() ; debug("exp = %s" % (exp))
 	debug_indent() ; debug("exp_kind   = %s" % (exp.exp_kind))
+
 	if exp.exp_kind == "assign":
 		# exp.exp returns a list. select first element exp.exp[0]
 		(v1,s2) = eval(self_object,store,environment,exp.exp[0])	
@@ -396,6 +400,7 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
 		return (v1,s3)
+
 	elif exp.exp_kind == "new":
 		# TODO: need to deal with SELF_TYPE
 		cname = exp.exp
@@ -408,28 +413,23 @@ def eval(self_object,store,environment,exp):
 		s2 = store
 		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
 		# find the attr_name in the class map
-
 			for (attr_name2, attr_type, attr_exp) in attrs_and_inits:
 		# get the type from it and return the default value, make the pairing
 				if attr_name == attr_name2:
 					s2[attr_loc] = default_value(attr_type)
-
 		final_store = s2
 		for (attr_name,_,attr_init) in attrs_and_inits:
 			if attr_init != []:
 				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init))
 				final_store = current_store
-
 			# FIXME: 0 in Assign constructor might make troubles
-
 		debug_indent() ; debug("ret = %s" % (v1))
 		debug_indent() ; debug("rets = %s" % (final_store))
 		indent_count -= 2
 		return (v1,final_store)
+
 	elif exp.exp_kind == "self_dispatch":
-
 		# call dynamic_dispatch, but use the self object for the receiver exp
-
 		self_exp = Exp(0,"identifier","self")
 		ret_exp = Dynamic_Dispatch(exp.loc,self_exp,exp.fname,exp.exp)
 		(ret_value,ret_store) = eval(self_object,store,environment,ret_exp)
@@ -453,15 +453,10 @@ def eval(self_object,store,environment,exp):
 
 		# evaluate receiver object
 		# TODO: what if they are not in there?
-
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
-
 		# look into imp_map
-
 		(formals,body) = imp_map[(v0.cname,exp.fname)]
-
 		# make new locations for each of the actual arguments
-
 		new_arg_locs = [ newloc() for x in exp.exp]
 
 		# make an updated store and add new locs to arg values
@@ -480,29 +475,113 @@ def eval(self_object,store,environment,exp):
 
 	elif exp.exp_kind == "isvoid":
 		pass
+
 	elif exp.exp_kind == "negate":
-		pass
-	elif exp.exp_kind == "plus": #need other operations
+		e1 = exp.exp
+		v1,s2 = eval(self_object,store,environment,e1)
+		new_value = v1.value * -1
+		debug_indent() ; debug("ret = %s" % (new_value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolInt(new_value),s2)
 
+	elif exp.exp_kind == "plus":
 		# Get each integer from plus expression
-
 		e1 = exp.exp[0]
 		e2 = exp.exp[1]
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value + v2.value
 		debug_indent() ; debug("ret = %s" % (new_value))
-		debug_indent() ; debug("rets = %s" % (store))
+		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
-		return (CoolInt(new_value), store)
+		return (CoolInt(new_value), s3)
+
+	elif exp.exp_kind == "minus":
+		# Get each integer from plus expression
+		e1 = exp.exp[0]
+		e2 = exp.exp[1]
+		v1, s2 = eval(self_object,store,environment,e1)
+		v2, s3 = eval(self_object,store,environment,e2)
+		new_value = v1.value - v2.value
+		debug_indent() ; debug("ret = %s" % (new_value))
+		debug_indent() ; debug("rets = %s" % (s3))
+		indent_count -= 2
+		return (CoolInt(new_value), s3)
+
+	elif exp.exp_kind == "multiply":
+		# Get each integer from plus expression
+		e1 = exp.exp[0]
+		e2 = exp.exp[1]
+		v1, s2 = eval(self_object,store,environment,e1)
+		v2, s3 = eval(self_object,store,environment,e2)
+		new_value = v1.value * v2.value
+		debug_indent() ; debug("ret = %s" % (new_value))
+		debug_indent() ; debug("rets = %s" % (s3))
+		indent_count -= 2
+		return (CoolInt(new_value), s3)
+
+	elif exp.exp_kind == "divide":
+		# Get each integer from plus expression
+		e1 = exp.exp[0]
+		e2 = exp.exp[1]
+		v1, s2 = eval(self_object,store,environment,e1)
+		v2, s3 = eval(self_object,store,environment,e2)
+		new_value = v1.value / v2.value
+		debug_indent() ; debug("ret = %s" % (new_value))
+		debug_indent() ; debug("rets = %s" % (s3))
+		indent_count -= 2
+		return (CoolInt(new_value), s3)
+
+	elif exp.exp_kind in ["lt","le","eq"]:
+		e1 = exp.exp[0]
+		e2 = exp.exp[1]
+		v1, s2 = eval(self_object,store,environment,e1)
+		v2, s3 = eval(self_object,store,environment,e2)
+		ret_value = "";
+		if exp.exp_kind == "lt":
+			if v1.value < v2.value:
+				ret_value = "true"
+			else:
+				ret_value = "false"
+		elif exp.exp_kind == "le":
+			if v1.value < v2.value or v1.value == v2.value:
+				ret_value = "true"
+			else:
+				ret_value = "false"
+		elif exp.exp_kind == "eq"
+			if v1.value == v2.value:
+				ret_value = "true"
+			else:
+				ret_value = "false"
+		else:
+			print("Error: this shouldn't happen in compare")
+
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (s3))
+		indent_count -= 2
+		return (CoolBool(ret_value), s3)
+
 	elif exp.exp_kind == "not":
-		pass
+		e1 = exp.exp
+		v1, s2 = eval(self_object,store,environment,e1);
+		ret_value = ""
+		if v1.value == "true":
+			ret_value = "false"
+		else:
+			ret_value = "true"
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (s2))
+		indent_count -= 2
+		return (CoolBool(ret_value), s2)	
+
 	elif exp.exp_kind == "integer":
 		value = int(exp.exp)
 		debug_indent() ; debug("ret = %s" % (value))
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
 		return (CoolInt(value), store)
+
 	elif exp.exp_kind == "string":
 		value = str(exp.exp)
 		length = len(value)
@@ -510,10 +589,19 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
 		return (CoolString(value,length), store)
+
 	elif exp.exp_kind == "true":
-		pass
+		debug_indent() ; debug("ret = %s" % ("true"))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolBool("true"),store)
+
 	elif exp.exp_kind == "false":
-		pass
+		debug_indent() ; debug("ret = %s" % ("false"))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolBool("false"),store)
+
 	elif exp.exp_kind == "identifier":
 		iden = exp.exp
 		if iden == "self":
@@ -524,8 +612,13 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
 		return (value,store)
+
 	elif exp.exp_kind == "SELF_TYPE":
+		debug_indent() ; debug("ret = %s" % ("SELF_OBJECT"))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
 		return (self_object,store)
+
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
 
