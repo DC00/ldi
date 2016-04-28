@@ -341,14 +341,15 @@ def read_impmap(imap):
 			print "ValueError, messed up while reading the lines from imp map"
 
 read_cmap(io_cmap[1:])
-#print "CLASS_MAP"
-#print_map(class_map)
+print "CLASS_MAP"
+print_map(class_map)
 
-#print "IMP_MAP"
+print "IMP_MAP"
 read_impmap(io_imap[1:])
-#print_map(imp_map)
+print_map(imp_map)
 
 new_location_counter = 1000
+
 def newloc():
 	global new_location_counter
 	new_location_counter += 1	
@@ -407,15 +408,18 @@ def eval(self_object,store,environment,exp):
 		s2 = store
 		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
 		# find the attr_name in the class map
+
 			for (attr_name2, attr_type, attr_exp) in attrs_and_inits:
 		# get the type from it and return the default value, make the pairing
 				if attr_name == attr_name2:
 					s2[attr_loc] = default_value(attr_type)
+
 		final_store = s2
 		for (attr_name,_,attr_init) in attrs_and_inits:
 			if attr_init != []:
 				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init))
 				final_store = current_store
+
 			# FIXME: 0 in Assign constructor might make troubles
 
 		debug_indent() ; debug("ret = %s" % (v1))
@@ -423,7 +427,9 @@ def eval(self_object,store,environment,exp):
 		indent_count -= 2
 		return (v1,final_store)
 	elif exp.exp_kind == "self_dispatch":
+
 		# call dynamic_dispatch, but use the self object for the receiver exp
+
 		self_exp = Exp(0,"identifier","self")
 		ret_exp = Dynamic_Dispatch(exp.loc,self_exp,exp.fname,exp.exp)
 		(ret_value,ret_store) = eval(self_object,store,environment,ret_exp)
@@ -447,14 +453,21 @@ def eval(self_object,store,environment,exp):
 
 		# evaluate receiver object
 		# TODO: what if they are not in there?
+
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
+
 		# look into imp_map
+
 		(formals,body) = imp_map[(v0.cname,exp.fname)]
+
 		# make new locations for each of the actual arguments
+
 		new_arg_locs = [ newloc() for x in exp.exp]
+
 		# make an updated store and add new locs to arg values
 		# TODO: should put formal parameters first so that they are visible 
 		# and they shadow the attributes
+
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
 		for (loc,value) in store_update.iteritems():
@@ -470,7 +483,9 @@ def eval(self_object,store,environment,exp):
 	elif exp.exp_kind == "negate":
 		pass
 	elif exp.exp_kind == "plus": #need other operations
+
 		# Get each integer from plus expression
+
 		e1 = exp.exp[0]
 		e2 = exp.exp[1]
 		v1, s2 = eval(self_object,store,environment,e1)
@@ -526,12 +541,12 @@ env = {}
 store = {}
 # Self Object
 self_object = None
+# self would be nothing at this point
 
 my_exp = Dynamic_Dispatch(0, Exp(0,"new", "Main"), "main", [])
 
 (new_value, new_store) = eval(self_object, store, env, my_exp)
 
-# self would be nothing at this point
 
 
 
