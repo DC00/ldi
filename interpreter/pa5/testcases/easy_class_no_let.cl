@@ -1,9 +1,9 @@
-class A {
-	x : Int;
+class Falco {
+	x : Int <- 999;
 };
 
 class Main inherits IO{
-	a : A <- new A;
+	a : Falco <- new Falco;
 	main () : Object {
 		out_string("done!")
 	};
