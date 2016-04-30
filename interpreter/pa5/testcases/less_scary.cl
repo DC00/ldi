@@ -6,6 +6,8 @@ class Raymond inherits Chinese {
    	         esac;
 
      baby : Int <- asian.gg() + grapes.gg() + gg() + happy();
+     gg() : Int { (let i: Int <- yellow in { yellow <- yellow + 7; i; } ) };
+	
 };
 
 class Rice inherits Food {
@@ -31,9 +33,9 @@ class Chinese inherits IO {
 
 class Main inherits IO {
   a : Chinese <- new Chinese;
-  -- b : Raymond <- new Raymond;
-  -- c : Food <- new Food;
-  -- d : Rice <- new Rice;
+  b : Raymond <- new Raymond;
+  c : Food <- new Food;
+  d : Rice <- new Rice;
 
   main(): String { { out_string("\n") ; "do nothing" ; } };
 
