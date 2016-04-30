@@ -16,6 +16,12 @@ class Exp:
 			return "New(%s)" % (str(self.exp))
 		elif self.exp_kind == "isvoid":
 			return "IsVoid(%s)" % (str(self.exp))
+		elif self.exp_kind == "if":
+			return "If(%s)" % (str(self.exp))
+		elif self.exp_kind == "block":
+			return "Block(%s)" % (str(self.exp))
+		elif self.exp_kind == "while":
+			return "While(%s)" % (str(self.exp))
 		elif self.exp_kind == "lt":
 			return "Lt(%s)" % (str(self.exp))
 		elif self.exp_kind == "le":
@@ -80,6 +86,45 @@ class Dynamic_Dispatch(Exp):
 		self.fname = fname
 	def __repr__(self):
 		return "Dynamic_Dispatch(%s,%s,%s)" % (self.e,self.fname,self.exp)
+
+class Static_Dispatch(Exp):
+	def __init__(self, loc=None, e=None, static_type=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"static_dispatch",exp)
+		self.e = e
+		self.static_type = static_type
+		self.fname = fname
+	def __repr__(self):
+		return "Static_Dispatch(%s,%s,%s,%s)" % (self.e,self.static_type,self.fname,self.exp)
+
+class Case(Exp):
+	def __init__(self,loc=None,exp=None,case_element_list=None):
+		Exp.__init__(self,loc,"case",exp)
+		self.case_element_list = case_element_list
+	def __repr__(self):
+		return "Case(%s,%s)" % (self.exp,self.case_element_list)
+
+class Case_Element():
+	def __init__(self,variable=None,type_name=None,body=None):
+		self.variable = variable
+		self.type_name = type_name
+		self.body = body
+	def __repr__(self):
+		return "Case_Element(%s,%s,%s)" % (self.variable,self.type_name,self.body)
+
+class Let(Exp):
+	def __init__(self,loc=None,binding_list=None,exp=None):
+		Exp.__init__(self,loc,"let",exp)
+		self.binding_list = binding_list
+	def __repr__(self):
+		return "Let(%s,%s)" % (self.binding_list, self.exp)
+
+class Let_Binding():
+	def __init__(self,variable=None,binding_type=None,value=None):
+		self.variable = variable
+		self.binding_type = binding_type
+		self.value = value
+	def __repr__(self):
+		return "Binding(%s,%s,%s)" % (self.variable,self.binding_type,self.value)
 
 #Types of Cool Values: Objects, Ints, Bools
 		
@@ -205,8 +250,8 @@ def read_exp_list(func,num):
 	ret_list = []
 	for i in range(num):
 		ret_list.append(func)
+		print func
 	return ret_list
-
 
 def read_id(e):
 	idloc = e.pop(0)
@@ -221,6 +266,31 @@ def read_internal_exp(e):
 	exp_body = e.pop(0)	# e.g. Object.abort  IO.in_int. See PA4 AST third bullet
 	t = Exp(loc, exp_kind, exp_body)
 	return t
+
+#def read_case_element(e):
+#	variable = read_id(e)
+#	type_name = read_id(e)
+#	body = read_exp(e)
+#	t = Case_Element(variable,type_name,body)
+#	return t
+
+#def read_binding(e):
+#	binding_kind = e.pop(0)
+#	if binding_kind == "let_binding_init":
+#		variable = read_id(e)
+#		binding_type = read_id(e)
+#		body = read_exp(e)
+#		t = Let_Binding(variable,binding_type,body)
+#		return t
+#	elif binding_kind == "let_binding_no_init":
+#		variable = read_id(e)
+#		binding_type = read_id(e)
+#		body = None
+#		t = Let_Binding(variable,binding_type,body)
+#		return t
+#	else:
+#		print("Binding type does not exist")
+#		return None
 
 def read_exp(e):
 	# Know that we need to read an exp
@@ -239,7 +309,8 @@ def read_exp(e):
 	# Read expressions based on exp_kind
 	if exp_kind == "assign":
 		var = read_id(e)
-		t = Assign(loc,var.exp,read_exp(e))
+		body = read_exp(e)
+		t = Assign(loc,var.exp,body)
 		return t
 	elif exp_kind == "new":
 		id_ver = read_id(e) 
@@ -258,6 +329,41 @@ def read_exp(e):
 		num_of_args = int(e.pop(0))
 		t = Dynamic_Dispatch(loc, e0, fname, read_exp_list(read_exp(e),num_of_args))
 		return t
+#	elif exp_kind == "static_dispatch":
+#		e0 = read_exp(e)	
+#		static_type = read_id(e)
+#		funcid = read_id(e)
+#		num_of_args = int(e.pop(0))
+#		t = Static_Dispatch(loc, e0, static_type.exp, funcid.exp, read_exp_list(read_exp(e),num_of_args))
+#		return t
+#	elif exp_kind == "let":
+#		num_of_bindings = int(e.pop(0))
+#		binding_list = read_exp_list(read_binding(e),num_of_bindings)
+#		body = read_exp(e)
+#		t = Let(loc,binding_list,body)
+#		return t
+#	elif exp_kind == "case":
+#		case_exp = read_exp(e)
+#		num_of_elements = int(e.pop(0))
+#		case_element_list = read_exp_list(read_case_element(e),num_of_elements)
+#		t = Case(loc,case_exp,case_element_list)
+#		return t
+#	elif exp_kind == "if":
+#		predicate = read_exp(e)
+#		then_statement = read_exp(e)
+#		else_statement = read_exp(e)
+#		t = Exp(loc, exp_kind, [predicate,then_statement,else_statement])
+#		return t
+	elif exp_kind == "block":
+		num_of_exps = int(e.pop(0))	
+		exp_list = read_exp_list(read_exp(e),num_of_exps)
+		t = Exp(loc, exp_kind, exp_list)
+		return t
+#	elif exp_kind == "while":
+#		predicate = read_exp(e)
+#		body = read_exp(e)
+#		t = Exp(loc, exp_kind, [predicate,body])
+#		return t
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
 		return t
@@ -290,6 +396,7 @@ def read_exp(e):
 		return read_id(e)		
 	else:
 		print "Expression %s not handled in read_exp(e)" % (exp_kind)
+		sys.exit(0)
 	
 
 def read_cmap(cmap_list):
@@ -299,11 +406,16 @@ def read_cmap(cmap_list):
 		try:
 			attrs = []
 			cname = cmap_list.pop(0)
+			#print cname
 			num_attrs = int(cmap_list.pop(0))
+			#print num_attrs
 			while num_attrs > 0:
 				initialize = cmap_list.pop(0)
+				#print initialize
 				attr_name = cmap_list.pop(0)
+				#print attr_name
 				attr_type = cmap_list.pop(0)
+				#print attr_type
 				attr_exp = []
 				if initialize == "initializer":
 					attr_exp.append(read_exp(cmap_list))
@@ -313,6 +425,7 @@ def read_cmap(cmap_list):
 			class_map[cname] = attrs
 		except ValueError:
 			print "ValueError, messed up somewhere in read_cmap"
+			sys.exit(0)
 
 # key: (class name, method name) value: (formals list, method body)
 def read_impmap(imap):
@@ -340,8 +453,10 @@ def read_impmap(imap):
 
 				imp_map[(class_name,method_name)] = (formal_list,body_exp)
 			num_classes -= 1
-		except ValueError:
+		except ValueError as e:
 			print "ValueError, messed up while reading the lines from imp map"
+			print e
+			sys.exit(0)
 
 read_cmap(io_cmap[1:])
 print "CLASS_MAP"
@@ -473,6 +588,24 @@ def eval(self_object,store,environment,exp):
 		indent_count -= 2
 		return (ret_value,ret_store)
 
+	elif exp.exp_kind == "static_dispatch":
+		pass
+
+	elif exp.exp_kind == "if":
+		pass
+	
+	elif exp.exp_kind == "block":
+		pass
+	
+	elif exp.exp_kind == "let":
+		pass
+	
+	elif exp.exp_kind == "case":
+		pass
+
+	elif exp.exp_kind == "while":
+		pass
+
 	elif exp.exp_kind == "isvoid":
 		pass
 
@@ -549,7 +682,7 @@ def eval(self_object,store,environment,exp):
 				ret_value = "true"
 			else:
 				ret_value = "false"
-		elif exp.exp_kind == "eq"
+		elif exp.exp_kind == "eq":
 			if v1.value == v2.value:
 				ret_value = "true"
 			else:
