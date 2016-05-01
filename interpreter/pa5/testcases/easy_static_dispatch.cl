@@ -1,18 +1,10 @@
 class A {
-	gg() : Int {(let i : Int <- 111 in {
-			i <- i + 1;
-			i;
-		})
-	};
+	gg() : Int { 111 };
 };
 
 class B inherits A {
 	b : B <- self;	
-	gg() : Int { (let j : Int <- 222 in {
-			j <- j + 999;
-			j;
-		})
-	};
+	gg() : Int { 222 };
 };
 
 class C inherits B {
