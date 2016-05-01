@@ -1,19 +1,14 @@
-class A {
-	gg() : Int { 111 };
+class A inherits IO {
+	gg() : String { { out_string("in A's gg\n"); "haha"; } };
 };
 
 class B inherits A {
-	b : B <- self;	
-	gg() : Int { 222 };
-};
-
-class C inherits B {
-	csgo : Int <- b@A.gg();
+	gg() : String { { out_string("in B's gg\n"); "haha"; } };
 };
 
 class Main inherits IO {
-	a : C <- new C;
-	main () : Object {
-		0
-	};
+	a : B <- new B;
+	main () : Object {{
+		a@B.gg();
+	}};
 };
