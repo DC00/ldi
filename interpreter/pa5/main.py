@@ -345,22 +345,22 @@ def read_exp(e):
 		case_element_list = [read_case_element(e) for i in range(num_of_elements)]
 		t = Case(loc,case_exp,case_element_list)
 		return t
-#	elif exp_kind == "if":
-#		predicate = read_exp(e)
-#		then_statement = read_exp(e)
-#		else_statement = read_exp(e)
-#		t = Exp(loc, exp_kind, [predicate,then_statement,else_statement])
-#		return t
+	elif exp_kind == "if":
+		predicate = read_exp(e)
+		then_statement = read_exp(e)
+		else_statement = read_exp(e)
+		t = Exp(loc, exp_kind, [predicate,then_statement,else_statement])
+		return t
 	elif exp_kind == "block":
 		num_of_exps = int(e.pop(0))	
 		exp_list = [read_exp(e) for i in range(num_of_exps)]
 		t = Exp(loc, exp_kind, exp_list)
 		return t
-#	elif exp_kind == "while":
-#		predicate = read_exp(e)
-#		body = read_exp(e)
-#		t = Exp(loc, exp_kind, [predicate,body])
-#		return t
+	elif exp_kind == "while":
+		predicate = read_exp(e)
+		body = read_exp(e)
+		t = Exp(loc, exp_kind, [predicate,body])
+		return t
 	elif exp_kind == "isvoid":
 		t = Exp(loc, exp_kind, read_exp(e)) 
 		return t
@@ -456,12 +456,12 @@ def read_impmap(imap):
 			sys.exit(0)
 
 read_cmap(io_cmap[1:])
-print "CLASS_MAP"
-print_map(class_map)
+#print "CLASS_MAP"
+#print_map(class_map)
 
-print "IMP_MAP"
+#print "IMP_MAP"
 read_impmap(io_imap[1:])
-print_map(imp_map)
+#print_map(imp_map)
 
 new_location_counter = 1000
 
@@ -502,8 +502,8 @@ def eval(self_object,store,environment,exp):
 	debug_indent() ; debug("exp_kind   = %s" % (exp.exp_kind))
 
 	if exp.exp_kind == "assign":
-		# exp.exp returns a list. select first element exp.exp[0]
-		(v1,s2) = eval(self_object,store,environment,exp.exp[0])	
+		# refer back to FIXME in new
+		(v1,s2) = eval(self_object,store,environment,exp.exp)	
 		l1 = environment[exp.var]	
 		del s2[l1] #FIXME: does this delete every instance?
 		s3 = s2
@@ -532,7 +532,8 @@ def eval(self_object,store,environment,exp):
 		final_store = s2
 		for (attr_name,_,attr_init) in attrs_and_inits:
 			if attr_init != []:
-				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init))
+				(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init[0]))
+			# FIXME: changed attr_init -> attr_init[0] because list vs no list is weird
 				final_store = current_store
 			# FIXME: 0 in Assign constructor might make troubles
 		debug_indent() ; debug("ret = %s" % (v1))
@@ -560,6 +561,7 @@ def eval(self_object,store,environment,exp):
 			arg_values.append(arg_value)
 
 	#ASIDE: dealing with out_string
+	#FIXME: look at harder_hello_world
 		if exp.fname == "out_string":
 			print arg_values[0].value.replace("\\n","\n"),
 
@@ -589,10 +591,42 @@ def eval(self_object,store,environment,exp):
 		pass
 
 	elif exp.exp_kind == "if":
-		pass
+		# eval the first expression and go off there (true or false)
+		e1 = exp.exp[0]
+		cool_bool,s2 = eval(self_object,store,environment,e1)
+		# If-True
+		if cool_bool.value == "true":
+			e2 = exp.exp[1]	
+			ret_value,ret_store = eval(self_object,s2,environment,e2)
+			debug_indent() ; debug("ret = %s" % (ret_value))
+			debug_indent() ; debug("rets = %s" % (ret_store))
+			indent_count -= 2
+			return ret_value,ret_store
+		# If-False
+		elif cool_bool.value == "false":
+			e3 = exp.exp[2]
+			ret_value,ret_store = eval(self_object,s2,environment,e3)	
+			debug_indent() ; debug("ret = %s" % (ret_value))
+			debug_indent() ; debug("rets = %s" % (ret_store))
+			indent_count -= 2
+			return ret_value,ret_store
+		# This cannot happen
+		else:
+			print "Problem with if"
+			sys.exit(0)
+			return None
 	
 	elif exp.exp_kind == "block":
-		pass
+		current_store = store #S1
+		current_value = None
+		for exp in exp.exp:
+			ret_value,ret_store = eval(self_object,current_store,environment,exp)
+			current_store = ret_store
+			current_value = ret_value
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (ret_store))
+		indent_count -= 2
+		return (ret_value,ret_store)
 	
 	elif exp.exp_kind == "let":
 		pass
