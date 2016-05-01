@@ -246,12 +246,6 @@ class_map = {}
 imp_map = {}
 # li : remaining part of class-map
 # helper : function
-def read_exp_list(func,num):
-	ret_list = []
-	for i in range(num):
-		ret_list.append(func)
-		print func
-	return ret_list
 
 def read_id(e):
 	idloc = e.pop(0)
@@ -267,30 +261,30 @@ def read_internal_exp(e):
 	t = Exp(loc, exp_kind, exp_body)
 	return t
 
-#def read_case_element(e):
-#	variable = read_id(e)
-#	type_name = read_id(e)
-#	body = read_exp(e)
-#	t = Case_Element(variable,type_name,body)
-#	return t
+def read_case_element(e):
+	variable = read_id(e)
+	type_name = read_id(e)
+	body = read_exp(e)
+	t = Case_Element(variable,type_name,body)
+	return t
 
-#def read_binding(e):
-#	binding_kind = e.pop(0)
-#	if binding_kind == "let_binding_init":
-#		variable = read_id(e)
-#		binding_type = read_id(e)
-#		body = read_exp(e)
-#		t = Let_Binding(variable,binding_type,body)
-#		return t
-#	elif binding_kind == "let_binding_no_init":
-#		variable = read_id(e)
-#		binding_type = read_id(e)
-#		body = None
-#		t = Let_Binding(variable,binding_type,body)
-#		return t
-#	else:
-#		print("Binding type does not exist")
-#		return None
+def read_binding(e):
+	binding_kind = e.pop(0)
+	if binding_kind == "let_binding_init":
+		variable = read_id(e)
+		binding_type = read_id(e)
+		body = read_exp(e)
+		t = Let_Binding(variable,binding_type,body)
+		return t
+	elif binding_kind == "let_binding_no_init":
+		variable = read_id(e)
+		binding_type = read_id(e)
+		body = None
+		t = Let_Binding(variable,binding_type,body)
+		return t
+	else:
+		print("Binding type does not exist")
+		return None
 
 def read_exp(e):
 	# Know that we need to read an exp
@@ -320,34 +314,37 @@ def read_exp(e):
 		funcid = read_id(e)
 		fname = funcid.exp
 		num_of_args = int(e.pop(0))
-		t = Self_Dispatch(loc, fname, read_exp_list(read_exp(e),num_of_args))
+		arg_list = [read_exp(e) for i in range(num_of_args)]
+		t = Self_Dispatch(loc, fname, arg_list)
 		return t
 	elif exp_kind == "dynamic_dispatch":
 		e0 = read_exp(e)
 		funcid = read_id(e)
 		fname = funcid.exp
 		num_of_args = int(e.pop(0))
-		t = Dynamic_Dispatch(loc, e0, fname, read_exp_list(read_exp(e),num_of_args))
+		arg_list = [read_exp(e) for i in range(num_of_args)]
+		t = Dynamic_Dispatch(loc, e0, fname, arg_list)
 		return t
-#	elif exp_kind == "static_dispatch":
-#		e0 = read_exp(e)	
-#		static_type = read_id(e)
-#		funcid = read_id(e)
-#		num_of_args = int(e.pop(0))
-#		t = Static_Dispatch(loc, e0, static_type.exp, funcid.exp, read_exp_list(read_exp(e),num_of_args))
-#		return t
-#	elif exp_kind == "let":
-#		num_of_bindings = int(e.pop(0))
-#		binding_list = read_exp_list(read_binding(e),num_of_bindings)
-#		body = read_exp(e)
-#		t = Let(loc,binding_list,body)
-#		return t
-#	elif exp_kind == "case":
-#		case_exp = read_exp(e)
-#		num_of_elements = int(e.pop(0))
-#		case_element_list = read_exp_list(read_case_element(e),num_of_elements)
-#		t = Case(loc,case_exp,case_element_list)
-#		return t
+	elif exp_kind == "static_dispatch":
+		e0 = read_exp(e)	
+		static_type = read_id(e)
+		funcid = read_id(e)
+		num_of_args = int(e.pop(0))
+		arg_list = [read_exp(e) for i in range(num_of_args)]
+		t = Static_Dispatch(loc, e0, static_type.exp, funcid.exp, arg_list)
+		return t
+	elif exp_kind == "let":
+		num_of_bindings = int(e.pop(0))
+		binding_list = [read_binding(e) for i in range(num_of_bindings)]
+		body = read_exp(e)
+		t = Let(loc,binding_list,body)
+		return t
+	elif exp_kind == "case":
+		case_exp = read_exp(e)
+		num_of_elements = int(e.pop(0))
+		case_element_list = [read_case_element(e) for i in range(num_of_elements)]
+		t = Case(loc,case_exp,case_element_list)
+		return t
 #	elif exp_kind == "if":
 #		predicate = read_exp(e)
 #		then_statement = read_exp(e)
@@ -356,7 +353,7 @@ def read_exp(e):
 #		return t
 	elif exp_kind == "block":
 		num_of_exps = int(e.pop(0))	
-		exp_list = read_exp_list(read_exp(e),num_of_exps)
+		exp_list = [read_exp(e) for i in range(num_of_exps)]
 		t = Exp(loc, exp_kind, exp_list)
 		return t
 #	elif exp_kind == "while":
