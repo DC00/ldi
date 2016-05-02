@@ -565,7 +565,7 @@ def eval(self_object,store,environment,exp):
 			arg_values.append(arg_value)
 
 	#ASIDE: dealing with out_string
-	#FIXME: look at harder_hello_world
+		#FIXME: look at harder_hello_world
 		if exp.fname == "out_string":
 			print arg_values[0].value.replace("\\n","\n"),
 
@@ -574,8 +574,8 @@ def eval(self_object,store,environment,exp):
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
 		# look into imp_map
 		(formals,body) = imp_map[(v0.cname,exp.fname)]
-		# make new locations for each of the actual arguments
-		new_arg_locs = [ newloc() for x in exp.exp]
+		# make new locations for each of the formals found in imp_map
+		new_arg_locs = [ newloc() for x in formals]
 
 		# make an updated store and add new locs to arg values
 		# TODO: should put formal parameters first so that they are visible 
@@ -585,6 +585,12 @@ def eval(self_object,store,environment,exp):
 		store_update = dict(zip(new_arg_locs, arg_values))
 		for (loc,value) in store_update.iteritems():
 			s_nplus3[loc] = value
+		# FIXME: need to have v0.attr_and_locs and imp_map formals to their locations
+		new_environment = v0.attr_and_locs
+		environment_update = dict(zip(formals,new_arg_locs))
+		for (identifier,loc) in environment_update.iteritems():
+			environment_update[
+
 		(ret_value,ret_store) = eval(v0,s_nplus3,v0.attr_and_locs,body)
 		debug_indent() ; debug("ret = %s" % (ret_value))
 		debug_indent() ; debug("rets = %s" % (ret_store))
@@ -592,7 +598,26 @@ def eval(self_object,store,environment,exp):
 		return (ret_value,ret_store)
 
 	elif exp.exp_kind == "static_dispatch":
-		pass
+		current_store = store
+		arg_values = []
+		for arg in exp.exp:
+			(arg_value, new_store) = eval(self_object,current_store,environment,arg)
+			current_store = new_store
+			arg_values.append(arg_value)
+		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
+		# Only change within static_dispatch
+		# v0.cname -> exp.static_type
+		(formals,body) = imp_map[(exp.static_type,exp.fname)]
+		new_arg_locs = [ newloc() for x in exp.exp]
+		s_nplus3 = s_nplus2
+		store_update = dict(zip(new_arg_locs, arg_values))
+		for (loc,value) in store_update.iteritems():
+			s_nplus3[loc] = value
+		(ret_value,ret_store) = eval(v0,s_nplus3,v0.attr_and_locs,body)
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (ret_store))
+		indent_count -= 2
+		return (ret_value,ret_store)
 
 	elif exp.exp_kind == "if":
 		# eval the first expression and go off there (true or false)
