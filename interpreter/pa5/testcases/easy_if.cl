@@ -6,7 +6,7 @@ class Main inherits IO {
 		(let test : Int <- 8 in
 		if a < test 
 			then out_int(a)
-		else if b < test 
+		else if b <= test 
 			then out_int(b)
 		else if c < test 
 			then out_int(c)
