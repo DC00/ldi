@@ -158,8 +158,12 @@ class CoolObject:
 		self.attr_and_locs = attr_and_locs
 	def __repr__(self):
 		return "CoolObject(%s,%s)" % (self.cname,self.attr_and_locs)
-	
-#TODO: Void
+
+class Void(CoolValue):
+	def __init__(self):
+		CoolValue.__init__(self,"Void",None)
+	def __repr__(self):
+		return "Void"
 
 # Helper functions
 def print_list(a):
@@ -174,7 +178,7 @@ def is_int(n):
 		return False
 
 # Debugging and Tracing
-do_debug = True
+do_debug = False
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -478,7 +482,7 @@ def default_value(typename):
 	elif typename == "Bool":
 		return False
 	else:
-		return "void" #FIXME: might need Void object
+		return Void()
 
 # Parameters:
 # 	so		: self object
@@ -635,10 +639,42 @@ def eval(self_object,store,environment,exp):
 		pass
 
 	elif exp.exp_kind == "while":
-		pass
+		# exp.exp = [e1,e2]
+		e1 = exp.exp[0]
+		v1,s2 = eval(self_object,store,environment,e1)
+		if v1.value == "true":
+			e2 = exp.exp[1]
+			v2,s3 = eval(self_object,s2,environment,e2)
+			while_call = Exp(exp.loc,exp.exp_kind,[e1,e2])
+			debug_indent() ; debug("ret = %s" % (while_call))
+			debug_indent() ; debug("rets = %s" % (s3))
+			indent_count -= 2
+			return eval(self_object,s3,environment,while_call)
+		elif v1.value == "false":	
+			ret_val = Void()
+			debug_indent() ; debug("ret = %s" % (ret_val))
+			debug_indent() ; debug("rets = %s" % (s2))
+			indent_count -= 2
+			return ret_val,s2	
+		else:
+			print "this cannot happen with while"
+			sys.exit(0)
 
 	elif exp.exp_kind == "isvoid":
-		pass
+		e1 = exp.exp
+		v1,s2 = eval(self_object,store,environment,e1) 
+		if isinstance(v1,Void): #FIXME: does this work?
+			ret_val = CoolBool("true")
+			debug_indent() ; debug("ret = %s" % (ret_val))
+			debug_indent() ; debug("rets = %s" % (s2))
+			indent_count -= 2
+			return ret_val,s2 
+		else:
+			ret_val = CoolBool("false")
+			debug_indent() ; debug("ret = %s" % (ret_val))
+			debug_indent() ; debug("rets = %s" % (s2))
+			indent_count -= 2
+			return ret_val,s2
 
 	elif exp.exp_kind == "negate":
 		e1 = exp.exp
@@ -797,20 +833,8 @@ env = {}
 # e.g. 
 store = {}
 # Self Object
-self_object = None
-# self would be nothing at this point
+self_object = Void()
 
 my_exp = Dynamic_Dispatch(0, Exp(0,"new", "Main"), "main", [])
 
 (new_value, new_store) = eval(self_object, store, env, my_exp)
-
-
-
-
-
-
-
-
-
-
-
