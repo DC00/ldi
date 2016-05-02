@@ -1,7 +1,7 @@
 (* Simple program with a let statement *)
-class Main {
+class Main inherits IO {
 	main () : Object {{
-		let x : Int <- 123 in
-		x;
+		let x : String <- "hello, world\n" in
+		out_string(x);
 	}};
 };

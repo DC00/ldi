@@ -178,7 +178,7 @@ def is_int(n):
 		return False
 
 # Debugging and Tracing
-do_debug = False
+do_debug = True
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -633,7 +633,44 @@ def eval(self_object,store,environment,exp):
 		return (ret_value,ret_store)
 	
 	elif exp.exp_kind == "let":
-		pass
+		# TODO: below is for one let binding, fix for multiple
+		# TODO: what about let_no_init?
+		if len(exp.binding_list) == 1:
+			let_exp = exp.binding_list[0]
+			e1 = let_exp.value
+			v1,s2 = eval(self_object,store,environment,e1)
+			l1 = newloc()
+			s3 = s2
+			s3[l1] = v1
+			env_id = let_exp.variable.exp
+			e_prime = environment
+			e_prime[env_id] = l1
+			e2 = exp.exp
+			v2,s4 = eval(self_object,s3,e_prime,e2)
+			debug_indent() ; debug("ret = %s" % (v2))
+			debug_indent() ; debug("rets = %s" % (s4))
+			indent_count -= 2
+			return v2,s4
+		else:
+			let_exp = exp.binding_list[0]
+			e1 = let_exp.value
+			v1,s2 = eval(self_object,store,environment,e1)
+			l1 = newloc()
+			s3 = s2
+			s3[l1] = v1
+			env_id = let_exp.variable.exp
+			e_prime = environment
+			e_prime[env_id] = l1
+			# need do another statement that will run into base case
+			# get rid of first element of binding list
+			exp.binding_list.pop(0)
+			# Make a new let expression with new binding_list
+			e2 = Let(exp.loc,exp.binding_list,exp.exp)
+			v2,s4 = eval(self_object,s3,e_prime,e2)
+			debug_indent() ; debug("ret = %s" % (v2))
+			debug_indent() ; debug("rets = %s" % (s4))
+			indent_count -= 2
+			return v2,s4
 	
 	elif exp.exp_kind == "case":
 		pass
@@ -663,7 +700,7 @@ def eval(self_object,store,environment,exp):
 	elif exp.exp_kind == "isvoid":
 		e1 = exp.exp
 		v1,s2 = eval(self_object,store,environment,e1) 
-		if isinstance(v1,Void): #FIXME: does this work?
+		if isinstance(v1,Void):
 			ret_val = CoolBool("true")
 			debug_indent() ; debug("ret = %s" % (ret_val))
 			debug_indent() ; debug("rets = %s" % (s2))
@@ -821,6 +858,7 @@ def eval(self_object,store,environment,exp):
 
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
+		sys.exit(0)
 
 # ----------MAIN----------
 	
