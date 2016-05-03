@@ -175,6 +175,19 @@ def is_int(n):
 	except ValueError:
 		return False
 
+# Finds the minimum value of a dictionary
+# (k,v)
+# IMPORTANT: types cannot be bound twice in a case statement, so all the
+# types in the case elements list are unique
+def find_min(d):
+	current_key_min = ""
+	current_min = sys.maxint	
+	for k,v in d.iteritems():
+		if v < current_min:
+			current_key_min = k
+			current_min = v
+	return (current_key_min,current_min)
+
 # Returns ancestory list of class a based on pmap
 # e.g. a=IO  return: [IO, Object]
 def get_inhr_list(a, ancestors):
@@ -196,7 +209,7 @@ def lub(a, b):
 	return None
 
 # Debugging and Tracing
-do_debug = True
+do_debug = False
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -747,17 +760,18 @@ def eval(self_object,store,environment,exp):
 	elif exp.exp_kind == "case":
 		e0 = exp.exp
 		v0,s2 = eval(self_object,store,environment,e0)
+
+		# Find lease common ancestor between case exp and case element list
 		distances = {}
 		case_types = [x.type_name.exp for x in exp.case_element_list]
 		case_exp_inhr_list = get_inhr_list(v0.cname, [])	
-		for i in case_types:
-			count = 0
-			for j in case_exp_inhr_list:
+		for i in case_exp_inhr_list:
+			count = 0		
+			for j in case_types:
 				if i == j:
-					distances[i] = count
+					distances[j] = count
 				count += 1
-		print_pmap(distances)
-		print_map(distances)
+		ti,ti_v = find_min(distances)
 
 		#l0 = newloc()
 		#s3 = s2
