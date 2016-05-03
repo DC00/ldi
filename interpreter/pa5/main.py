@@ -196,7 +196,7 @@ def lub(a, b):
 	return None
 
 # Debugging and Tracing
-do_debug = False
+do_debug = True
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -495,7 +495,7 @@ read_cmap(io_cmap[1:])
 read_impmap(io_imap[1:])
 read_pmap(io_pmap[1:])
 
-do_print = True
+do_print = False
 if do_print:
 	print "CLASS_MAP"
 	print_map(class_map)
@@ -520,16 +520,6 @@ def default_value(typename):
 		return CoolBool("false")
 	else:
 		return Void()
-
-
-
-
-
-
-
-
-
-
 
 # Parameters:
 # 	so		: self object
@@ -755,7 +745,24 @@ def eval(self_object,store,environment,exp):
 			return v2,s4
 	
 	elif exp.exp_kind == "case":
-		
+		e0 = exp.exp
+		v0,s2 = eval(self_object,store,environment,e0)
+		distances = {}
+		case_types = [x.type_name.exp for x in exp.case_element_list]
+		case_exp_inhr_list = get_inhr_list(v0.cname, [])	
+		for i in case_types:
+			count = 0
+			for j in case_exp_inhr_list:
+				if i == j:
+					distances[i] = count
+				count += 1
+		print_pmap(distances)
+		print_map(distances)
+
+		#l0 = newloc()
+		#s3 = s2
+		#s3[l0] = v0
+
 		pass
 
 	elif exp.exp_kind == "while":
