@@ -128,30 +128,6 @@ class Let_Binding():
 
 #Types of Cool Values: Objects, Ints, Bools
 		
-class CoolValue:
-	def __init__(self, value_type=None, value=None):
-		self.value_type = value_type
-		self.value = value
-
-class CoolInt(CoolValue):
-	def __init__(self, value=0):
-		CoolValue.__init__(self,"Int", value)
-	def __repr__(self):
-		return "CoolInt(%s)" % (self.value)
-
-class CoolString(CoolValue):
-	def __init__(self, value="", length=0):
-		CoolValue.__init__(self,"String",value)
-		self.length = length
-	def __repr__(self):
-		return "CoolString(%s)" % (self.value)
-
-class CoolBool(CoolValue):
-	def __init__(self, value="false"):
-		CoolValue.__init__(self,"Bool",value)
-	def __repr__(self):
-		return "CoolBool(%s)" % (self.value)
-
 class CoolObject:
 	def __init__(self, cname=None, attr_and_locs={}):
 		self.cname = cname
@@ -159,9 +135,31 @@ class CoolObject:
 	def __repr__(self):
 		return "CoolObject(%s,%s)" % (self.cname,self.attr_and_locs)
 
-class Void(CoolValue):
-	def __init__(self):
-		CoolValue.__init__(self,"Void",None)
+class CoolInt(CoolObject):
+	def __init__(self, value=0):
+		CoolObject.__init__(self,"Int", {})
+		self.value = value
+	def __repr__(self):
+		return "CoolInt(%s)" % (self.value)
+
+class CoolString(CoolObject):
+	def __init__(self, value="", length=0):
+		CoolObject.__init__(self,"String",{})
+		self.value = value
+		self.length = length
+	def __repr__(self):
+		return "CoolString(%s,%s)" % (self.value,self.length)
+
+class CoolBool(CoolObject):
+	def __init__(self, value="false"):
+		CoolObject.__init__(self,"Bool",{})
+		self.value = value
+	def __repr__(self):
+		return "CoolBool(%s)" % (self.value)
+
+class Void():
+	def __init__(self, value=None):
+		self.value = value
 	def __repr__(self):
 		return "Void"
 
@@ -178,7 +176,7 @@ def is_int(n):
 		return False
 
 # Debugging and Tracing
-do_debug = True
+do_debug = False
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -203,7 +201,7 @@ fname = sys.argv[1]
 type_file = []
 with open(fname, 'r') as fin:
 	for line in fin:
-		type_file.append(line.rstrip())
+		type_file.append(line.rstrip('\n'))
 
 io_cmap = []
 io_imap = []
@@ -577,14 +575,13 @@ def eval(self_object,store,environment,exp):
 		new_arg_locs = [ newloc() for x in formals]
 
 		# make an updated store and add new locs to arg values
-		# TODO: should put formal parameters first so that they are visible
-		# and they shadow the attributes
-
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
 		for (loc,value) in store_update.iteritems():
 			s_nplus3[loc] = value
 		# need to have v0.attr_and_locs and imp_map formals to their locations in the new_env
+		# TODO: should put formal parameters first so that they are visible
+		# and they shadow the attributes
 		new_environment = v0.attr_and_locs
 		environment_update = dict(zip(formals,new_arg_locs))
 		for (identifier,loc) in environment_update.iteritems():
@@ -898,7 +895,26 @@ def eval(self_object,store,environment,exp):
 		elif fname == "out_int":
 			sys.stdout.write(str(store[environment['x']].value))
 			return self_object,store
-				
+		elif fname == "in_string":
+			pass
+		elif fname == "in_int":
+			pass
+		elif fname == "length":
+			return CoolInt(self_object.length),store
+		elif fname == "concat":
+			string1 = self_object.value.replace("\\n","\n")
+			string2 = store[environment['s']].value.replace("\\n","\n")
+			concat_str = string1 + string2
+			return CoolString(concat_str,len(concat_str)),store
+		elif fname == "substr":
+			pass
+		elif fname == "abort":
+			pass
+		elif fname == "copy":
+			pass
+		else:
+			print "Where did this internal come from?"
+			sys.exit(0)
 	
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
