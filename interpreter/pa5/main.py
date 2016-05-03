@@ -196,7 +196,7 @@ def lub(a, b):
 	return None
 
 # Debugging and Tracing
-do_debug = True
+do_debug = False
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -877,6 +877,7 @@ def eval(self_object,store,environment,exp):
 			else:
 				ret_value = "false"
 		elif exp.exp_kind == "eq":
+		# TODO: check for nonvoid comparison (check addresses look@CRM)
 			if v1.value == v2.value:
 				ret_value = "true"
 			else:
@@ -961,7 +962,12 @@ def eval(self_object,store,environment,exp):
 			concat_str = string1 + string2
 			return CoolString(concat_str,len(concat_str)),store
 		elif fname == "substr":
-			pass
+		# FIXME: needs to stop returning newline
+			string = self_object.value.replace("\\n","\n")
+			beg = int(store[environment['i']].value)
+			length = int(store[environment['l']].value)
+			substring = string[beg:beg+length]
+			return CoolString(substring,len(substring)),store
 		elif fname == "abort":
 			pass
 		elif fname == "copy":
