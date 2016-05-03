@@ -177,6 +177,26 @@ def is_int(n):
 	except ValueError:
 		return False
 
+# Returns ancestory list of class a based on pmap
+# e.g. a=IO  return: [IO, Object]
+def get_inhr_list(a, ancestors):
+	if a == "Object":
+		ancestors.append(a)
+		return ancestors
+	else:
+		ancestors.append(a)
+		return get_inhr_list(pmap[a], ancestors)
+
+# Returns the least common ancestor between class=a and class=b
+def lub(a, b):
+	ancestors_a = get_inhr_list(a, [])
+	ancestors_b = get_inhr_list(b, [])
+	for c in ancestors_a:
+		for c2 in ancestors_b:
+			if c == c2:
+				return c
+	return None
+
 # Debugging and Tracing
 do_debug = True
 global indent_count
@@ -196,6 +216,10 @@ def print_map(hmap):
 		for v in hmap[k]:
 			print "%s -> %s" % (k, v)
 		print
+
+def print_pmap(pm):
+	for k in pm:
+		print "%s -> %s" % (k, pm[k])
 
 fname = sys.argv[1]
 
@@ -248,6 +272,7 @@ io_pmap = io_pmap[0:split_pos]
 # Deerialize the class_map
 class_map = {}
 imp_map = {}
+pmap = {}
 # li : remaining part of class-map
 # helper : function
 
@@ -460,13 +485,26 @@ def read_impmap(imap):
 			print e
 			sys.exit(0)
 
-read_cmap(io_cmap[1:])
-#print "CLASS_MAP"
-#print_map(class_map)
+def read_pmap(pmap_list):
+	num_classes = int(pmap_list.pop(0))
+	while num_classes > 0:
+		c = pmap_list.pop(0)
+		d = pmap_list.pop(0)
+		pmap[c] = d
+	 	num_classes -= 1
 
-#print "IMP_MAP"
+read_cmap(io_cmap[1:])
 read_impmap(io_imap[1:])
-#print_map(imp_map)
+read_pmap(io_pmap[1:])
+
+do_print = True
+if do_print:
+	print "CLASS_MAP"
+	print_map(class_map)
+	print "IMP_MAP"
+	print_map(imp_map)
+	print "PARENT_MAP"
+	print_pmap(pmap)
 
 new_location_counter = 1000
 
@@ -485,6 +523,16 @@ def default_value(typename):
 	else:
 		return Void()
 
+
+
+
+
+
+
+
+
+
+
 # Parameters:
 # 	so		: self object
 # 	store 	: store maps addresses to values
@@ -493,7 +541,6 @@ def default_value(typename):
 #
 # Return Value:
 #	(new_value, updated_store)
-
 
 
 def eval(self_object,store,environment,exp):
