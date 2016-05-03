@@ -1,3 +1,16 @@
+class Chinese inherits IO {
+     yellow : Int <- 1;
+     grapes : Raymond  <- case self of
+		     	n : Chinese => (new Raymond);
+		     	n : Food => (new Rice);
+			n : Raymond  => (new Food);
+			n : Rice => n;
+		  esac;
+
+     happy() : Int { { out_int(yellow); 0; } };
+     gg() : Int { (let i: Int <- yellow in { yellow <- yellow + 1; i; } ) };
+};
+
 class Raymond inherits Chinese {
      asian : Food <- case self of
 		      n : Food => (new Rice);
@@ -10,25 +23,12 @@ class Raymond inherits Chinese {
 	
 };
 
-class Rice inherits Food {
-     dcoo : Object <- happy();
-};
-
 class Food inherits Raymond {
      f : Int <- asian@Chinese.gg();
 };
 
-class Chinese inherits IO {
-     yellow : Int <- 1;
-     grapes : Raymond  <- case self of
-		     	n : Chinese => (new Raymond);
-		     	n : Food => (new Rice);
-			n : Raymond  => (new Food);
-			n : Rice => n;
-		  esac;
-
-     happy() : Int { { out_int(yellow); 0; } };
-     gg() : Int { (let i: Int <- yellow in { yellow <- yellow + 1; i; } ) };
+class Rice inherits Food {
+     dcoo : Object <- happy();
 };
 
 class Main inherits IO {
