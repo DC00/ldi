@@ -50,18 +50,18 @@ class Exp:
 			return "Bool(%s)" % (str(self.exp))
 		elif self.exp_kind == "identifier":
 			return "ID(%s)" % (str(self.exp))
-		elif self.exp_kind == "Object":
-			return "Internal_Object(%s)" % (str(self.exp))
-		elif self.exp_kind == "Int":
-			return "Internal_Int(%s)" % (str(self.exp))
-		elif self.exp_kind == "IO":
-			return "Internal_IO(%s)" % (str(self.exp))
-		elif self.exp_kind == "SELF_TYPE":
-			return "Internal_SELF_TYPE(%s)" % (str(self.exp))
-		elif self.exp_kind == "String":
-			return "Internal_String(%s)" % (str(self.exp))
 		else:
 			return "exp not handled in to string"
+
+
+class Internal(Exp):
+	def __init__(self, loc=None,parent_class=None,return_type=None,exp=None):
+		Exp.__init__(self, loc, "internal",exp)
+		self.return_type = return_type	
+		self.parent_class = parent_class
+		
+	def __repr__(self):
+		return "Internal(%s,%s,%s)" % (self.parent_class,self.exp, self.return_type)
 
 #TODO: do for every other expression that is a bitch
 
@@ -259,10 +259,11 @@ def read_id(e):
 
 def read_internal_exp(e):
 	loc = e.pop(0)  # loc is always 0
-	exp_kind = e.pop(0)
+	ret_type = e.pop(0)
 	internal = e.pop(0)
 	exp_body = e.pop(0)	# e.g. Object.abort  IO.in_int. See PA4 AST third bullet
-	t = Exp(loc, exp_kind, exp_body)
+	parent_class = exp_body.split(".")[0]
+	t = Internal(loc,parent_class,ret_type,exp_body)
 	return t
 
 def read_case_element(e):
@@ -476,11 +477,11 @@ def newloc():
 
 def default_value(typename):
 	if typename == "Int":
-		return 0
+		return CoolInt(0)
 	elif typename == "String":
-		return ""
+		return CoolString("",0)
 	elif typename == "Bool":
-		return False
+		return CoolBool("false")
 	else:
 		return Void()
 
@@ -518,13 +519,16 @@ def eval(self_object,store,environment,exp):
 		return (v1,s3)
 
 	elif exp.exp_kind == "new":
-		# TODO: need to deal with SELF_TYPE
-		cname = exp.exp
-		attrs_and_inits = class_map[cname]
+		t0 = exp.exp
+		if t0 == "SELF_TYPE":
+			t0 = self_object.cname
+		else:
+			t0 = exp.exp
+		attrs_and_inits = class_map[t0]
 		new_attrs_locs = [newloc() for x in attrs_and_inits]
 		attr_names = [attr_name for (attr_name,attr_type,attr_exp) in attrs_and_inits]
 		attrs_and_locs = dict(zip(attr_names, new_attrs_locs))
-		v1 = CoolObject(cname, attrs_and_locs)
+		v1 = CoolObject(t0, attrs_and_locs)
 		# iterate through key,value pairs (attrname to loc)
 		s2 = store
 		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
@@ -564,11 +568,6 @@ def eval(self_object,store,environment,exp):
 			current_store = new_store
 			arg_values.append(arg_value)
 
-	#ASIDE: dealing with out_string
-		#FIXME: look at harder_hello_world
-		if exp.fname == "out_string":
-			print arg_values[0].value.replace("\\n","\n"),
-
 		# evaluate receiver object
 		# TODO: what if they are not in there?
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
@@ -578,20 +577,19 @@ def eval(self_object,store,environment,exp):
 		new_arg_locs = [ newloc() for x in formals]
 
 		# make an updated store and add new locs to arg values
-		# TODO: should put formal parameters first so that they are visible 
+		# TODO: should put formal parameters first so that they are visible
 		# and they shadow the attributes
 
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
 		for (loc,value) in store_update.iteritems():
 			s_nplus3[loc] = value
-		# FIXME: need to have v0.attr_and_locs and imp_map formals to their locations
+		# need to have v0.attr_and_locs and imp_map formals to their locations in the new_env
 		new_environment = v0.attr_and_locs
 		environment_update = dict(zip(formals,new_arg_locs))
 		for (identifier,loc) in environment_update.iteritems():
-			environment_update[
-
-		(ret_value,ret_store) = eval(v0,s_nplus3,v0.attr_and_locs,body)
+			new_environment[identifier] = loc
+		(ret_value,ret_store) = eval(v0,s_nplus3,new_environment,body)
 		debug_indent() ; debug("ret = %s" % (ret_value))
 		debug_indent() ; debug("rets = %s" % (ret_store))
 		indent_count -= 2
@@ -608,12 +606,16 @@ def eval(self_object,store,environment,exp):
 		# Only change within static_dispatch
 		# v0.cname -> exp.static_type
 		(formals,body) = imp_map[(exp.static_type,exp.fname)]
-		new_arg_locs = [ newloc() for x in exp.exp]
+		new_arg_locs = [ newloc() for x in formals]
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
 		for (loc,value) in store_update.iteritems():
 			s_nplus3[loc] = value
-		(ret_value,ret_store) = eval(v0,s_nplus3,v0.attr_and_locs,body)
+		new_environment = v0.attr_and_locs
+		environment_update = dict(zip(formals,new_arg_locs))
+		for (identifier,loc) in environment_update.iteritems():
+			new_environment[identifier] = loc
+		(ret_value,ret_store) = eval(v0,s_nplus3,new_environment,body)
 		debug_indent() ; debug("ret = %s" % (ret_value))
 		debug_indent() ; debug("rets = %s" % (ret_store))
 		indent_count -= 2
@@ -658,12 +660,17 @@ def eval(self_object,store,environment,exp):
 		return (ret_value,ret_store)
 	
 	elif exp.exp_kind == "let":
-		# TODO: below is for one let binding, fix for multiple
 		# TODO: what about let_no_init?
 		if len(exp.binding_list) == 1:
 			let_exp = exp.binding_list[0]
 			e1 = let_exp.value
-			v1,s2 = eval(self_object,store,environment,e1)
+			v1 = None
+			s2 = None
+			if e1 == None:
+				v1 = default_value(let_exp.binding_type.exp)
+				s2 = store
+			else:
+				v1,s2 = eval(self_object,store,environment,e1)
 			l1 = newloc()
 			s3 = s2
 			s3[l1] = v1
@@ -679,7 +686,13 @@ def eval(self_object,store,environment,exp):
 		else:
 			let_exp = exp.binding_list[0]
 			e1 = let_exp.value
-			v1,s2 = eval(self_object,store,environment,e1)
+			v1 = None
+			s2 = None
+			if e1 is None:
+				v1 = default_value(let_exp.binding_type.exp)
+				s2 = store
+			else:
+				v1,s2 = eval(self_object,store,environment,e1)
 			l1 = newloc()
 			s3 = s2
 			s3[l1] = v1
@@ -698,6 +711,7 @@ def eval(self_object,store,environment,exp):
 			return v2,s4
 	
 	elif exp.exp_kind == "case":
+		
 		pass
 
 	elif exp.exp_kind == "while":
@@ -874,13 +888,18 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
 		return (value,store)
-
-	elif exp.exp_kind == "SELF_TYPE":
-		debug_indent() ; debug("ret = %s" % ("SELF_OBJECT"))
-		debug_indent() ; debug("rets = %s" % (store))
-		indent_count -= 2
-		return (self_object,store)
-
+	
+	elif exp.exp_kind == "internal":
+		fname = exp.exp.split(".")[1]
+		# out_string(x : String) : SELF_TYPE
+		if fname == "out_string":
+			print store[environment['x']].value.replace("\\n","\n"),
+			return self_object,store
+		elif fname == "out_int":
+			sys.stdout.write(str(store[environment['x']].value))
+			return self_object,store
+				
+	
 	else:
 		print "Expression %s not handled" % (exp.exp_kind)
 		sys.exit(0)
