@@ -503,6 +503,13 @@ try:
 			d = pmap_list.pop(0)
 			pmap[c] = d
 			num_classes -= 1
+	
+	def read_arg():
+		filename = sys.argv[2]
+		with open(filename, 'r') as f:
+			read_data = f.read()
+		return read_data
+		
 
 	read_cmap(io_cmap[1:])
 	read_impmap(io_imap[1:])
@@ -864,7 +871,7 @@ try:
 			indent_count -= 2
 			return (CoolInt(new_value), s3)
 
-		elif exp.exp_kind == "multiply":
+		elif exp.exp_kind == "times":
 			# Get each integer from plus expression
 			e1 = exp.exp[0]
 			e2 = exp.exp[1]
@@ -971,17 +978,20 @@ try:
 		
 		elif exp.exp_kind == "internal":
 			fname = exp.exp.split(".")[1]
-			# out_string(x : String) : SELF_TYPE
 			if fname == "out_string":
-				print store[environment['x']].value.replace("\\n","\n"),
+				string = store[environment['x']].value.replace("\\n","\n")
+				sys.stdout.write(string)
 				return self_object,store
 			elif fname == "out_int":
 				sys.stdout.write(str(store[environment['x']].value))
 				return self_object,store
 			elif fname == "in_string":
-				pass
+				# FIXME: behavior for numbers
+				read_str = read_arg()
+				return CoolString(read_str,len(read_str)),store
 			elif fname == "in_int":
-				pass
+				read_int = read_arg()
+				return CoolInt(read_int),store
 			elif fname == "length":
 				return CoolInt(self_object.length),store
 			elif fname == "concat":
@@ -991,7 +1001,6 @@ try:
 				return CoolString(concat_str,len(concat_str)),store
 			elif fname == "substr":
 			# FIXME: needs to stop returning newline
-			# TODO: use slices instead
 				string = self_object.value.replace("\\n","\n")
 				beg = int(store[environment['i']].value)
 				length = int(store[environment['l']].value)
@@ -1001,18 +1010,25 @@ try:
 				print "abort"
 				sys.exit(0)	
 			elif fname == "type_name":
-				pass
+				return_str = self_object.cname
+				return CoolString(return_str,len(return_str)),store
 			elif fname == "copy":
 				# get the attributes and make new locations for them
-
+				attr_list = list(self_object.attr_and_locs.keys())
+				loc_list = list(self_object.attr_and_locs.values())
+				new_locs = [ newloc() for i in attr_list ]
 				# get the values from the self object and then putting 
 				# into the store with the new locations
-
-				# return the object with the old attributes to the
+				values = [ store[i] for i in loc_list ]
+				store_update = dict(zip(new_locs,values))
+				s2 = store
+				for (loc,value) in store_update.iteritems():
+					s2[loc] = value
+				# return a new object with the old attributes to the
 				# new locations
-
-				pass
-
+				new_attr_and_locs = dict(zip(attr_list,new_locs))
+				shallow_copy = CoolObject(self_object.cname,new_attr_and_locs)
+				return shallow_copy,s2
 			else:
 				print "Where did this internal come from?"
 				sys.exit(0)
