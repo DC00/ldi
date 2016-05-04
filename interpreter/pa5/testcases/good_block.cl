@@ -13,5 +13,9 @@ class Main inherits IO{
 		done <- 22;
 		with <- 33;
 		ldi <- 44; 	
+		out_int(almost);
+		out_int(done);
+		out_int(with);
+		out_int(ldi);
 	} };
 };

@@ -5,3 +5,4 @@ if [ -e $1-type ]; then
 fi
 cool --type $1
 python main.py $1-type
+mv $1-type testcases/logs

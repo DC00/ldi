@@ -1,4 +1,4 @@
-class Int {
+class Int2 {
 	abort3() : Object {
 		2
 	};

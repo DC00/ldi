@@ -6,7 +6,7 @@ class Main inherits IO {
 	main () : String {{ 
 		let y : Int <- 5 in
 		concat(y);	
-		out_int(x);
+		out_int(y);
 		"do nothing" ; 
 	}};
 };
