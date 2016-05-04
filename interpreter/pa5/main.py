@@ -514,7 +514,7 @@ try:
 	read_cmap(io_cmap[1:])
 	read_impmap(io_imap[1:])
 	read_pmap(io_pmap[1:])
-	if (sys.argv[2]):
+	if (len(sys.argv) > 2):
 		read_arg()
 
 	do_print = False
@@ -990,7 +990,7 @@ try:
 			elif fname == "in_string":
 				# FIXME: behavior for numbers
 				read_line = io_argv.pop(0)
-				return CoolString(read_line,len(read_str)),store
+				return CoolString(read_line,len(read_line)),store
 			elif fname == "in_int":
 				read_int = read_arg()
 				return CoolInt(read_int),store
