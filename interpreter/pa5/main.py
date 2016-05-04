@@ -988,9 +988,11 @@ try:
 				sys.stdout.write(str(store[environment['x']].value))
 				return self_object,store
 			elif fname == "in_string":
-				# FIXME: behavior for numbers
-				read_line = io_argv.pop(0)
-				return CoolString(read_line,len(read_line)),store
+				if len(io_argv) > 0:
+					read_line = io_argv.pop(0)
+					return CoolString(read_line,len(read_line)),store
+				else:
+					return CoolString("",0), store
 			elif fname == "in_int":
 				read_int = read_arg()
 				return CoolInt(read_int),store
