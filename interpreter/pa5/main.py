@@ -186,7 +186,7 @@ def find_min(d):
 		if v < current_min:
 			current_key_min = k
 			current_min = v
-	return (current_key_min,current_min)
+	return (current_key_min)
 
 # Returns ancestory list of class a based on pmap
 # e.g. a=IO  return: [IO, Object]
@@ -209,7 +209,7 @@ def lub(a, b):
 	return None
 
 # Debugging and Tracing
-do_debug = False
+do_debug = True
 global indent_count
 indent_count = 0
 def debug_indent():
@@ -761,7 +761,9 @@ def eval(self_object,store,environment,exp):
 		e0 = exp.exp
 		v0,s2 = eval(self_object,store,environment,e0)
 
-		# Find lease common ancestor between case exp and case element list
+		# Find lease common ancestor between case exp 
+		# and case element list
+
 		distances = {}
 		case_types = [x.type_name.exp for x in exp.case_element_list]
 		case_exp_inhr_list = get_inhr_list(v0.cname, [])	
@@ -771,13 +773,25 @@ def eval(self_object,store,environment,exp):
 				if i == j:
 					distances[j] = count
 				count += 1
-		ti,ti_v = find_min(distances)
+		t_i = find_min(distances)
 
-		#l0 = newloc()
-		#s3 = s2
-		#s3[l0] = v0
+		l0 = newloc()
+		s3 = s2
+		s3[l0] = v0
+		id_i = None
+		e_i = None
+		for case_element in exp.case_element_list:
+			if case_element.type_name.exp == t_i:
+				ld_i = case_element.variable.exp
+				e_i = case_element.body
+		environment_prime = environment
+		environment_prime[id_i] = l0
+		v1,s4 = eval(self_object,s3,environment_prime,e_i)
+		debug_indent() ; debug("ret = %s" % (v1))
+		debug_indent() ; debug("rets = %s" % (s4))
+		indent_count -= 2
+		return v1,s4
 
-		pass
 
 	elif exp.exp_kind == "while":
 		# exp.exp = [e1,e2]
@@ -977,15 +991,28 @@ def eval(self_object,store,environment,exp):
 			return CoolString(concat_str,len(concat_str)),store
 		elif fname == "substr":
 		# FIXME: needs to stop returning newline
+		# TODO: use slices instead
 			string = self_object.value.replace("\\n","\n")
 			beg = int(store[environment['i']].value)
 			length = int(store[environment['l']].value)
 			substring = string[beg:beg+length]
 			return CoolString(substring,len(substring)),store
 		elif fname == "abort":
+			print "abort"
+			sys.exit(0)	
+		elif fname == "type_name":
 			pass
 		elif fname == "copy":
+			# get the attributes and make new locations for them
+
+			# get the values from the self object and then putting 
+			# into the store with the new locations
+
+			# return the object with the old attributes to the
+			# new locations
+
 			pass
+
 		else:
 			print "Where did this internal come from?"
 			sys.exit(0)
