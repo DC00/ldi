@@ -776,12 +776,12 @@ try:
 			distances = {}
 			case_types = [x.type_name.exp for x in exp.case_element_list]
 			case_exp_inhr_list = get_inhr_list(v0.cname, [])	
+			count = 0		
 			for i in case_exp_inhr_list:
-				count = 0		
 				for j in case_types:
 					if i == j:
 						distances[j] = count
-					count += 1
+				count += 1
 			t_i = find_min(distances)
 
 			l0 = newloc()
@@ -791,7 +791,7 @@ try:
 			e_i = None
 			for case_element in exp.case_element_list:
 				if case_element.type_name.exp == t_i:
-					ld_i = case_element.variable.exp
+					id_i = case_element.variable.exp
 					e_i = case_element.body
 			environment_prime = environment
 			environment_prime[id_i] = l0
@@ -970,6 +970,9 @@ try:
 		elif exp.exp_kind == "identifier":
 			iden = exp.exp
 			if iden == "self":
+				debug_indent() ; debug("ret = %s" % (self_object))
+				debug_indent() ; debug("rets = %s" % (store))
+				indent_count -= 2
 				return (self_object,store)
 			loc = environment[iden]
 			value = store[loc]
