@@ -243,6 +243,7 @@ try:
 	io_cmap = []
 	io_imap = []
 	io_pmap = []
+	io_argv = []
 	#TODO: Do we find this useful for any case? LUB?
 	io_ast  = []
 
@@ -507,13 +508,14 @@ try:
 	def read_arg():
 		filename = sys.argv[2]
 		with open(filename, 'r') as f:
-			read_data = f.read()
-		return read_data
-		
+			for line in f:
+				io_argv.append(line.rstrip('\n'))
 
 	read_cmap(io_cmap[1:])
 	read_impmap(io_imap[1:])
 	read_pmap(io_pmap[1:])
+	if (sys.argv[2]):
+		read_arg()
 
 	do_print = False
 	if do_print:
@@ -987,8 +989,8 @@ try:
 				return self_object,store
 			elif fname == "in_string":
 				# FIXME: behavior for numbers
-				read_str = read_arg()
-				return CoolString(read_str,len(read_str)),store
+				read_line = io_argv.pop(0)
+				return CoolString(read_line,len(read_str)),store
 			elif fname == "in_int":
 				read_int = read_arg()
 				return CoolInt(read_int),store
