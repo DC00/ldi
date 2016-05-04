@@ -982,8 +982,12 @@ try:
 			fname = exp.exp.split(".")[1]
 			if fname == "out_string":
 				string = store[environment['x']].value.replace("\\n","\n")
-				sys.stdout.write(string)
-				return self_object,store
+				if string != '\x00':
+					sys.stdout.write(string)
+					return self_object,store
+				else:
+					sys.stdout.write("")
+					return self_object,store
 			elif fname == "out_int":
 				sys.stdout.write(str(store[environment['x']].value))
 				return self_object,store
