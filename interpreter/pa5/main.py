@@ -998,8 +998,16 @@ try:
 				else:
 					return CoolString("",0), store
 			elif fname == "in_int":
-				read_int = read_arg()
-				return CoolInt(read_int),store
+				if len(io_argv) > 0:
+					try:
+						read_line = int(io_argv.pop(0))
+						if read_line > 2147483647 or read_line < -2147483648:
+							return CoolInt(0),store
+						return CoolInt(read_line),store
+					except ValueError:
+						return CoolInt(0),store
+				else:
+					return CoolInt(0), store
 			elif fname == "length":
 				return CoolInt(self_object.length),store
 			elif fname == "concat":
