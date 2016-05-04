@@ -208,8 +208,170 @@ try:
 					return c
 		return None
 
+<<<<<<< HEAD
 	# Debugging and Tracing
 	do_debug = False
+=======
+class Internal(Exp):
+	def __init__(self, loc=None,parent_class=None,return_type=None,exp=None):
+		Exp.__init__(self, loc, "internal",exp)
+		self.return_type = return_type	
+		self.parent_class = parent_class
+		
+	def __repr__(self):
+		return "Internal(%s,%s,%s)" % (self.parent_class,self.exp, self.return_type)
+
+#TODO: do for every other expression that is a bitch
+
+class Assign(Exp):
+	def __init__(self, loc=None, var=None, exp=None):
+		Exp.__init__(self,loc,"assign",exp)
+		self.var = var
+	def __repr__(self):
+		return "Assign(%s,%s)" % (self.var,self.exp)
+
+class Self_Dispatch(Exp):
+	def __init__(self, loc=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"self_dispatch",exp) 
+		self.fname = fname
+	def __repr__(self):
+		return "Self_Dispatch(%s,%s)" % (self.fname,self.exp)
+
+class Dynamic_Dispatch(Exp):
+	def __init__(self, loc=None, e=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"dynamic_dispatch",exp) 
+		self.e = e
+		self.fname = fname
+	def __repr__(self):
+		return "Dynamic_Dispatch(%s,%s,%s)" % (self.e,self.fname,self.exp)
+
+class Static_Dispatch(Exp):
+	def __init__(self, loc=None, e=None, static_type=None, fname=None, exp=None):
+		Exp.__init__(self,loc,"static_dispatch",exp)
+		self.e = e
+		self.static_type = static_type
+		self.fname = fname
+	def __repr__(self):
+		return "Static_Dispatch(%s,%s,%s,%s)" % (self.e,self.static_type,self.fname,self.exp)
+
+class Case(Exp):
+	def __init__(self,loc=None,exp=None,case_element_list=None):
+		Exp.__init__(self,loc,"case",exp)
+		self.case_element_list = case_element_list
+	def __repr__(self):
+		return "Case(%s,%s)" % (self.exp,self.case_element_list)
+
+class Case_Element():
+	def __init__(self,variable=None,type_name=None,body=None):
+		self.variable = variable
+		self.type_name = type_name
+		self.body = body
+	def __repr__(self):
+		return "Case_Element(%s,%s,%s)" % (self.variable,self.type_name,self.body)
+
+class Let(Exp):
+	def __init__(self,loc=None,binding_list=None,exp=None):
+		Exp.__init__(self,loc,"let",exp)
+		self.binding_list = binding_list
+	def __repr__(self):
+		return "Let(%s,%s)" % (self.binding_list, self.exp)
+
+class Let_Binding():
+	def __init__(self,variable=None,binding_type=None,value=None):
+		self.variable = variable
+		self.binding_type = binding_type
+		self.value = value
+	def __repr__(self):
+		return "Binding(%s,%s,%s)" % (self.variable,self.binding_type,self.value)
+
+#Types of Cool Values: Objects, Ints, Bools
+		
+class CoolObject:
+	def __init__(self, cname=None, attr_and_locs={}):
+		self.cname = cname
+		self.attr_and_locs = attr_and_locs
+	def __repr__(self):
+		return "CoolObject(%s,%s)" % (self.cname,self.attr_and_locs)
+
+class CoolInt(CoolObject):
+	def __init__(self, value=0):
+		CoolObject.__init__(self,"Int", {})
+		self.value = value
+	def __repr__(self):
+		return "CoolInt(%s)" % (self.value)
+
+class CoolString(CoolObject):
+	def __init__(self, value="", length=0):
+		CoolObject.__init__(self,"String",{})
+		self.value = value
+		self.length = length
+	def __repr__(self):
+		return "CoolString(%s,%s)" % (self.value,self.length)
+
+class CoolBool(CoolObject):
+	def __init__(self, value="false"):
+		CoolObject.__init__(self,"Bool",{})
+		self.value = value
+	def __repr__(self):
+		return "CoolBool(%s)" % (self.value)
+
+class Void():
+	def __init__(self, value=None):
+		self.value = value
+	def __repr__(self):
+		return "Void"
+
+# Helper functions
+def print_list(a):
+	for elt in a:
+		print elt
+
+def is_int(n):
+	try:
+		int(n)
+		return True
+	except ValueError:
+		return False
+
+# Finds the minimum value of a dictionary
+# (k,v)
+# IMPORTANT: types cannot be bound twice in a case statement, so all the
+# types in the case elements list are unique
+def find_min(d):
+	current_key_min = ""
+	current_min = sys.maxint	
+	for k,v in d.iteritems():
+		if v < current_min:
+			current_key_min = k
+			current_min = v
+	return (current_key_min)
+
+# Returns ancestory list of class a based on pmap
+# e.g. a=IO  return: [IO, Object]
+def get_inhr_list(a, ancestors):
+	if a == "Object":
+		ancestors.append(a)
+		return ancestors
+	else:
+		ancestors.append(a)
+		return get_inhr_list(pmap[a], ancestors)
+
+# Returns the least common ancestor between class=a and class=b
+def lub(a, b):
+	ancestors_a = get_inhr_list(a, [])
+	ancestors_b = get_inhr_list(b, [])
+	for c in ancestors_a:
+		for c2 in ancestors_b:
+			if c == c2:
+				return c
+	return None
+
+# Debugging and Tracing
+do_debug = True
+global indent_count
+indent_count = 0
+def debug_indent():
+>>>>>>> 8072391ac51f83698016f0c211f04107d2f4d050
 	global indent_count
 	indent_count = 0
 	def debug_indent():
@@ -824,11 +986,57 @@ try:
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (store))
 			indent_count -= 2
+<<<<<<< HEAD
 			return (CoolInt(new_value),s2)
 
 		elif exp.exp_kind == "plus":
 			# Get each integer from plus expression
 			e1 = exp.exp[0]
+=======
+			return v2,s4
+	
+	elif exp.exp_kind == "case":
+		e0 = exp.exp
+		v0,s2 = eval(self_object,store,environment,e0)
+
+		# Find lease common ancestor between case exp 
+		# and case element list
+
+		distances = {}
+		case_types = [x.type_name.exp for x in exp.case_element_list]
+		case_exp_inhr_list = get_inhr_list(v0.cname, [])	
+		for i in case_exp_inhr_list:
+			count = 0		
+			for j in case_types:
+				if i == j:
+					distances[j] = count
+				count += 1
+		t_i = find_min(distances)
+
+		l0 = newloc()
+		s3 = s2
+		s3[l0] = v0
+		id_i = None
+		e_i = None
+		for case_element in exp.case_element_list:
+			if case_element.type_name.exp == t_i:
+				ld_i = case_element.variable.exp
+				e_i = case_element.body
+		environment_prime = environment
+		environment_prime[id_i] = l0
+		v1,s4 = eval(self_object,s3,environment_prime,e_i)
+		debug_indent() ; debug("ret = %s" % (v1))
+		debug_indent() ; debug("rets = %s" % (s4))
+		indent_count -= 2
+		return v1,s4
+
+
+	elif exp.exp_kind == "while":
+		# exp.exp = [e1,e2]
+		e1 = exp.exp[0]
+		v1,s2 = eval(self_object,store,environment,e1)
+		if v1.value == "true":
+>>>>>>> 8072391ac51f83698016f0c211f04107d2f4d050
 			e2 = exp.exp[1]
 			v1, s2 = eval(self_object,store,environment,e1)
 			v2, s3 = eval(self_object,store,environment,e2)
@@ -987,9 +1195,116 @@ try:
 			elif fname == "copy":
 				pass
 			else:
+<<<<<<< HEAD
 				print "Where did this internal come from?"
 				sys.exit(0)
 		
+=======
+				ret_value = "false"
+		else:
+			print("Error: this shouldn't happen in compare")
+
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (s3))
+		indent_count -= 2
+		return (CoolBool(ret_value), s3)
+
+	elif exp.exp_kind == "not":
+		e1 = exp.exp
+		v1, s2 = eval(self_object,store,environment,e1);
+		ret_value = ""
+		if v1.value == "true":
+			ret_value = "false"
+		else:
+			ret_value = "true"
+		debug_indent() ; debug("ret = %s" % (ret_value))
+		debug_indent() ; debug("rets = %s" % (s2))
+		indent_count -= 2
+		return (CoolBool(ret_value), s2)	
+
+	elif exp.exp_kind == "integer":
+		value = int(exp.exp)
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolInt(value), store)
+
+	elif exp.exp_kind == "string":
+		value = str(exp.exp)
+		length = len(value)
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolString(value,length), store)
+
+	elif exp.exp_kind == "true":
+		debug_indent() ; debug("ret = %s" % ("true"))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolBool("true"),store)
+
+	elif exp.exp_kind == "false":
+		debug_indent() ; debug("ret = %s" % ("false"))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (CoolBool("false"),store)
+
+	elif exp.exp_kind == "identifier":
+		iden = exp.exp
+		if iden == "self":
+			return (self_object,store)
+		loc = environment[iden]
+		value = store[loc]
+		debug_indent() ; debug("ret = %s" % (value))
+		debug_indent() ; debug("rets = %s" % (store))
+		indent_count -= 2
+		return (value,store)
+	
+	elif exp.exp_kind == "internal":
+		fname = exp.exp.split(".")[1]
+		# out_string(x : String) : SELF_TYPE
+		if fname == "out_string":
+			print store[environment['x']].value.replace("\\n","\n"),
+			return self_object,store
+		elif fname == "out_int":
+			sys.stdout.write(str(store[environment['x']].value))
+			return self_object,store
+		elif fname == "in_string":
+			pass
+		elif fname == "in_int":
+			pass
+		elif fname == "length":
+			return CoolInt(self_object.length),store
+		elif fname == "concat":
+			string1 = self_object.value.replace("\\n","\n")
+			string2 = store[environment['s']].value.replace("\\n","\n")
+			concat_str = string1 + string2
+			return CoolString(concat_str,len(concat_str)),store
+		elif fname == "substr":
+		# FIXME: needs to stop returning newline
+		# TODO: use slices instead
+			string = self_object.value.replace("\\n","\n")
+			beg = int(store[environment['i']].value)
+			length = int(store[environment['l']].value)
+			substring = string[beg:beg+length]
+			return CoolString(substring,len(substring)),store
+		elif fname == "abort":
+			print "abort"
+			sys.exit(0)	
+		elif fname == "type_name":
+			pass
+		elif fname == "copy":
+			# get the attributes and make new locations for them
+
+			# get the values from the self object and then putting 
+			# into the store with the new locations
+
+			# return the object with the old attributes to the
+			# new locations
+
+			pass
+
+>>>>>>> 8072391ac51f83698016f0c211f04107d2f4d050
 		else:
 			print "Expression %s not handled" % (exp.exp_kind)
 			sys.exit(0)
