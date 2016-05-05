@@ -209,7 +209,7 @@ try:
 		return None
 
 	# Debugging and Tracing
-	do_debug = True
+	do_debug = False
 	global indent_count
 	indent_count = 0
 	def debug_indent():
@@ -634,38 +634,11 @@ try:
 			# TODO: should put formal parameters first so that they are visible
 			# and they shadow the attributes
 
-			new_environment = v0.attr_and_locs
-			#new_environment = environment
-			print "v0:"
-			print v0
-			print "ENVIRONMENT"
-			print environment
-
-			print "HERE1"
-			print new_environment
-			print "HERE1"
-			
-			print "ENVIRONMENT_UPDATE"
-			
+			new_environment = copy.deepcopy(v0.attr_and_locs)
 
 			environment_update = dict(zip(formals,new_arg_locs))
 			for (identifier,loc) in environment_update.iteritems():
 				new_environment[identifier] = loc
-			print environment_update
-
-			print "HERE2"
-			print new_environment
-			print "HERE2"
-
-			print "ENVIRONMENT"
-			print environment
-
-		#	for (identifier,loc) in v0.attr_and_locs.iteritems():
-		#		new_environment[identifier] = loc
-
-		#	print "HERE3"
-		#	print new_environment
-		#	print "HERE3"
 
 			(ret_value,ret_store) = eval(v0,s_nplus3,new_environment,body)
 			debug_indent() ; debug("ret = %s" % (ret_value))
