@@ -3,7 +3,7 @@
 
 # Read in .cl-type file
 # Separate into class_map, imp_map, parent_map, and ast
-import sys, traceback
+import sys, traceback, copy
 try:
 	class Exp:
 		def __init__(self, loc=None, exp_kind=None, exp=None):
@@ -209,7 +209,7 @@ try:
 		return None
 
 	# Debugging and Tracing
-	do_debug = False
+	do_debug = True
 	global indent_count
 	indent_count = 0
 	def debug_indent():
@@ -633,10 +633,40 @@ try:
 			# need to have v0.attr_and_locs and imp_map formals to their locations in the new_env
 			# TODO: should put formal parameters first so that they are visible
 			# and they shadow the attributes
+
 			new_environment = v0.attr_and_locs
+			#new_environment = environment
+			print "v0:"
+			print v0
+			print "ENVIRONMENT"
+			print environment
+
+			print "HERE1"
+			print new_environment
+			print "HERE1"
+			
+			print "ENVIRONMENT_UPDATE"
+			
+
 			environment_update = dict(zip(formals,new_arg_locs))
 			for (identifier,loc) in environment_update.iteritems():
 				new_environment[identifier] = loc
+			print environment_update
+
+			print "HERE2"
+			print new_environment
+			print "HERE2"
+
+			print "ENVIRONMENT"
+			print environment
+
+		#	for (identifier,loc) in v0.attr_and_locs.iteritems():
+		#		new_environment[identifier] = loc
+
+		#	print "HERE3"
+		#	print new_environment
+		#	print "HERE3"
+
 			(ret_value,ret_store) = eval(v0,s_nplus3,new_environment,body)
 			debug_indent() ; debug("ret = %s" % (ret_value))
 			debug_indent() ; debug("rets = %s" % (ret_store))
@@ -723,7 +753,7 @@ try:
 				s3 = s2
 				s3[l1] = v1
 				env_id = let_exp.variable.exp
-				e_prime = environment
+				e_prime = copy.deepcopy(environment)
 				e_prime[env_id] = l1
 				e2 = exp.exp
 				v2,s4 = eval(self_object,s3,e_prime,e2)
@@ -745,7 +775,7 @@ try:
 				s3 = s2
 				s3[l1] = v1
 				env_id = let_exp.variable.exp
-				e_prime = environment
+				e_prime = copy.deepcopy(environment)
 				e_prime[env_id] = l1
 				# need do another statement that will run into base case
 				# get rid of first element of binding list
@@ -785,7 +815,7 @@ try:
 				if case_element.type_name.exp == t_i:
 					id_i = case_element.variable.exp
 					e_i = case_element.body
-			environment_prime = environment
+			environment_prime = copy.deepcopy(environment)
 			environment_prime[id_i] = l0
 			v1,s4 = eval(self_object,s3,environment_prime,e_i)
 			debug_indent() ; debug("ret = %s" % (v1))
@@ -1042,7 +1072,8 @@ try:
 		#-------------------TESTING-(MATT)-----------------------
 
 		#		shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs)
-		#		return shallow_copy,store
+		#--------------------------------------------------------
+				return shallow_copy,store
 			else:
 				print "Where did this internal come from?"
 				sys.exit(0)
