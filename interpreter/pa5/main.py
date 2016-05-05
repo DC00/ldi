@@ -243,7 +243,7 @@ try:
 	io_cmap = []
 	io_imap = []
 	io_pmap = []
-	io_argv = []
+	#io_argv = []
 	#TODO: Do we find this useful for any case? LUB?
 	io_ast  = []
 
@@ -505,17 +505,17 @@ try:
 			pmap[c] = d
 			num_classes -= 1
 	
-	def read_arg():
-		filename = sys.argv[2]
-		with open(filename, 'r') as f:
-			for line in f:
-				io_argv.append(line.rstrip('\n'))
+#	def read_arg():
+#		filename = sys.argv[2]
+#		with open(filename, 'r') as f:
+#			for line in f:
+#				io_argv.append(line.rstrip('\n'))
 
 	read_cmap(io_cmap[1:])
 	read_impmap(io_imap[1:])
 	read_pmap(io_pmap[1:])
-	if (len(sys.argv) > 2):
-		read_arg()
+#	if (len(sys.argv) > 2):
+#		read_arg()
 
 	do_print = False
 	if do_print:
@@ -995,22 +995,21 @@ try:
 				sys.stdout.write(str(store[environment['x']].value))
 				return self_object,store
 			elif fname == "in_string":
-				if len(io_argv) > 0:
-					read_line = io_argv.pop(0)
+				try:
+					read_line = raw_input().replace("\\t","\t")
+					if read_line == None:
+						return CoolString("",0),store
 					return CoolString(read_line,len(read_line)),store
-				else:
-					return CoolString("",0), store
+				except EOFError:
+					return CoolString("",0),store
 			elif fname == "in_int":
-				if len(io_argv) > 0:
-					try:
-						read_line = int(io_argv.pop(0))
-						if read_line > 2147483647 or read_line < -2147483648:
-							return CoolInt(0),store
-						return CoolInt(read_line),store
-					except ValueError:
+				try:
+					read_line = int(raw_input())
+					if read_line > 2147483647 or read_line < -2147483648 or read_line == None:
 						return CoolInt(0),store
-				else:
-					return CoolInt(0), store
+					return CoolInt(read_line),store
+				except ValueError:
+					return CoolInt(0),store
 			elif fname == "length":
 				return CoolInt(self_object.length),store
 			elif fname == "concat":
@@ -1047,7 +1046,11 @@ try:
 				# new locations
 				new_attr_and_locs = dict(zip(attr_list,new_locs))
 				shallow_copy = CoolObject(self_object.cname,new_attr_and_locs)
-				return shallow_copy,s2
+
+		#-------------------TESTING-(MATT)-----------------------
+
+		#		shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs)
+		#		return shallow_copy,store
 			else:
 				print "Where did this internal come from?"
 				sys.exit(0)
