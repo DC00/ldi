@@ -504,18 +504,10 @@ try:
 			d = pmap_list.pop(0)
 			pmap[c] = d
 			num_classes -= 1
-	
-#	def read_arg():
-#		filename = sys.argv[2]
-#		with open(filename, 'r') as f:
-#			for line in f:
-#				io_argv.append(line.rstrip('\n'))
 
 	read_cmap(io_cmap[1:])
 	read_impmap(io_imap[1:])
 	read_pmap(io_pmap[1:])
-#	if (len(sys.argv) > 2):
-#		read_arg()
 
 	do_print = False
 	if do_print:
