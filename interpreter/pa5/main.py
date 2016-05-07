@@ -960,10 +960,6 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("ret = %s" % (value))
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
-		print "\n#############\n"
-		print environment
-		print store
-		print "\n#############\n"
 		return (CoolInt(value), store)
 
 	elif exp.exp_kind == "string":
@@ -1033,18 +1029,16 @@ def eval(self_object,store,environment,exp):
 				read_line.strip()
 
 				# find all numbers in the string
-				numbers = re.findall(r'\d+', read_line)
+				numbers = re.findall(r'[-]?\d+', read_line)
 				if len(numbers) > 0:
 					# Only concerned with first number, CRM
 					first_num = int(numbers[0])
-					if str(first_num) == read_line[0:len(str(first_num))]:
-						if first_num > 2147483647 or first_num < -2147483648 or first_num == None:
-							return CoolInt(0),store
-						return CoolInt(first_num),store
-					else:
+					if int(first_num) > 2147483647 or int(first_num) < -2147483648 or first_num == None:
 						return CoolInt(0),store
+					return CoolInt(int(first_num)),store
 				else:
 					return CoolInt(0),store
+				return CoolInt(0),store
 			except ValueError, EOFError:
 				return CoolInt(0),store
 		elif fname == "length":
