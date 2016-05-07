@@ -1037,10 +1037,12 @@ def eval(self_object,store,environment,exp):
 				if len(numbers) > 0:
 					# Only concerned with first number, CRM
 					first_num = int(numbers[0])
-					if first_num == read_line[0:len(str(first_num))]:
+					if str(first_num) == read_line[0:len(str(first_num))]:
 						if first_num > 2147483647 or first_num < -2147483648 or first_num == None:
 							return CoolInt(0),store
-					return CoolInt(first_num),store
+						return CoolInt(first_num),store
+					else:
+						return CoolInt(0),store
 				else:
 					return CoolInt(0),store
 			except ValueError, EOFError:
