@@ -928,7 +928,7 @@ def eval(self_object,store,environment,exp):
 				ret_value = "false"
 		elif exp.exp_kind == "eq":
 			# TODO : Locations are not being set for CoolObjects
-			if v1.loc == v2.loc:
+			if v1.value == v2.value:
 				ret_value = "true"
 			else:
 				ret_value = "false"
