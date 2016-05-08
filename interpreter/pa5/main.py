@@ -1083,9 +1083,9 @@ def eval(self_object,store,environment,exp):
 		elif fname == "copy":
 			# get the attributes and make new locations for them
 
-			#attr_list = list(self_object.attr_and_locs.keys())
-			#loc_list = list(self_object.attr_and_locs.values())
-			#new_locs = [ newloc() for i in attr_list ]
+			attr_list = list(self_object.attr_and_locs.keys())
+			loc_list = list(self_object.attr_and_locs.values())
+			new_locs = [ newloc() for i in attr_list ]
 
 			## get the values from the self object and then putting 
 			## into the store with the new locations
