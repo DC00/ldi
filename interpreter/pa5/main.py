@@ -129,7 +129,7 @@ class Let_Binding():
 #Types of Cool Values: Objects, Ints, Bools
 		
 class CoolObject:
-	def __init__(self, cname=None, attr_and_locs={}, loc=999999999):
+	def __init__(self, cname=None, attr_and_locs={}, loc=0):
 		self.cname = cname
 		self.attr_and_locs = attr_and_locs
 		self.loc = loc
@@ -138,28 +138,29 @@ class CoolObject:
 
 class CoolInt(CoolObject):
 	def __init__(self, value=0):
-		CoolObject.__init__(self,"Int", {})
+		CoolObject.__init__(self,"Int", {},0)
 		self.value = value
 	def __repr__(self):
-		return "CoolInt(%s)" % (self.value)
+		return "CoolInt(%s,loc=%s)" % (self.value,self.loc)
 
 class CoolString(CoolObject):
 	def __init__(self, value="", length=0):
-		CoolObject.__init__(self,"String",{})
+		CoolObject.__init__(self,"String",{},0)
 		self.value = value
 		self.length = length
 	def __repr__(self):
-		return "CoolString(%s,%s)" % (self.value,self.length)
+		return "CoolString(%s,%s,loc=%s)" % (self.value,self.length,self.loc)
 
 class CoolBool(CoolObject):
 	def __init__(self, value="false"):
-		CoolObject.__init__(self,"Bool",{})
+		CoolObject.__init__(self,"Bool",{},0)
 		self.value = value
 	def __repr__(self):
-		return "CoolBool(%s)" % (self.value)
+		return "CoolBool(%s,loc=%s)" % (self.value,self.loc)
 
 class Void():
 	def __init__(self, value=None):
+		self.cname = "Void"
 		self.value = value
 	def __repr__(self):
 		return "Void"
@@ -564,6 +565,7 @@ def eval(self_object,store,environment,exp):
 		del s2[l1] #FIXME: does this delete every instance?
 		s3 = s2
 		s3[l1] = v1
+		v1.loc = l1
 		debug_indent() ; debug("ret = %s" % (v1))
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
@@ -580,7 +582,7 @@ def eval(self_object,store,environment,exp):
 		new_attrs_locs = [newloc() for x in attrs_and_inits]
 		attr_names = [attr_name for (attr_name,attr_type,attr_exp) in attrs_and_inits]
 		attrs_and_locs = dict(zip(attr_names, new_attrs_locs))
-		v1 = CoolObject(t0, attrs_and_locs, newloc())
+		v1 = CoolObject(t0, attrs_and_locs)
 		# iterate through key,value pairs (attrname to loc)
 		s2 = copy.deepcopy(store)
 		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
@@ -589,6 +591,7 @@ def eval(self_object,store,environment,exp):
 		# get the type from it and return the default value, make the pairing
 				if attr_name == attr_name2:
 					s2[attr_loc] = default_value(attr_type)
+					s2[attr_loc].loc = attr_loc
 		final_store = copy.deepcopy(s2)
 		for (attr_name,_,attr_init) in attrs_and_inits:
 			if attr_init != []:
@@ -633,8 +636,9 @@ def eval(self_object,store,environment,exp):
 		# make an updated store and add new locs to arg values
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
-		for (loc,value) in store_update.iteritems():
-			s_nplus3[loc] = value
+		for (l,value) in store_update.iteritems():
+			value.loc = l
+			s_nplus3[l] = value
 		# need to have v0.attr_and_locs and imp_map formals to their locations in the new_env
 		# TODO: should put formal parameters first so that they are visible
 		# and they shadow the attributes
@@ -666,8 +670,9 @@ def eval(self_object,store,environment,exp):
 		new_arg_locs = [ newloc() for x in formals]
 		s_nplus3 = s_nplus2
 		store_update = dict(zip(new_arg_locs, arg_values))
-		for (loc,value) in store_update.iteritems():
-			s_nplus3[loc] = value
+		for (l,value) in store_update.iteritems():
+			value.loc = l
+			s_nplus3[l] = value
 		new_environment = v0.attr_and_locs
 		environment_update = dict(zip(formals,new_arg_locs))
 		for (identifier,loc) in environment_update.iteritems():
@@ -732,6 +737,7 @@ def eval(self_object,store,environment,exp):
 			else:
 				v1,s2 = eval(self_object,store,environment,e1)
 			l1 = newloc()
+			v1.loc = l1
 			s3 = s2
 			s3[l1] = v1
 			env_id = let_exp.variable.exp
@@ -754,6 +760,7 @@ def eval(self_object,store,environment,exp):
 			else:
 				v1,s2 = eval(self_object,store,environment,e1)
 			l1 = newloc()
+			v1.loc = l1
 			s3 = s2
 			s3[l1] = v1
 			env_id = let_exp.variable.exp
@@ -791,6 +798,7 @@ def eval(self_object,store,environment,exp):
 
 		l0 = newloc()
 		s3 = s2
+		v0.loc = l0
 		s3[l0] = v0
 		id_i = None
 		e_i = None
@@ -927,13 +935,20 @@ def eval(self_object,store,environment,exp):
 			else:
 				ret_value = "false"
 		elif exp.exp_kind == "eq":
+			if v1.cname in ["String","Int","Bool","Void"]:
 			# TODO : Locations are not being set for CoolObjects
-			if v1.value == v2.value:
-				ret_value = "true"
+				if v1.value == v2.value:
+					ret_value = "true"
+				else:
+					ret_value = "false"
 			else:
-				ret_value = "false"
+				if v1.loc == v2.loc:
+					ret_value = "true"
+				else:
+					ret_value = "false"
 		else:
 			print("Error: this shouldn't happen in compare")
+			sys.exit(0)
 
 		debug_indent() ; debug("ret = %s" % (ret_value))
 		debug_indent() ; debug("rets = %s" % (s3))
@@ -993,8 +1008,8 @@ def eval(self_object,store,environment,exp):
 			debug_indent() ; debug("rets = %s" % (store))
 			indent_count -= 2
 			return (self_object,store)
-		loc = environment[iden]
-		value = store[loc]
+		l = environment[iden]
+		value = store[l]
 		debug_indent() ; debug("ret = %s" % (value))
 		debug_indent() ; debug("rets = %s" % (store))
 		indent_count -= 2
@@ -1016,11 +1031,11 @@ def eval(self_object,store,environment,exp):
 			return self_object,store
 		elif fname == "in_string":
 			try:
-				read_line = raw_input().replace("\\t","\t")
+				read_line = raw_input().replace("\\t","\t").replace('\x00', "")
 				if read_line == None:
 					return CoolString("",0),store
 				return CoolString(read_line,len(read_line)),store
-			except EOFError:
+			except:
 				return CoolString("",0),store
 		elif fname == "in_int":
 			try:
@@ -1071,25 +1086,25 @@ def eval(self_object,store,environment,exp):
 			## get the values from the self object and then putting 
 			## into the store with the new locations
 
-			#values = [ store[i] for i in loc_list ]
-			#store_update = dict(zip(new_locs,values))
-			#s2 = store
-			#for (loc,value) in store_update.iteritems():
-			#	s2[loc] = value
+			values = [ store[i] for i in loc_list ]
+			store_update = dict(zip(new_locs,values))
+			s2 = store
+			for (l,value) in store_update.iteritems():
+				value.loc = l
+				s2[l] = value
 
 			## return a new object with the old attributes to the
 			## new locations
 
-			#new_attr_and_locs = dict(zip(attr_list,new_locs))
-			#shallow_copy = CoolObject(self_object.cname,new_attr_and_locs)
+			new_attr_and_locs = dict(zip(attr_list,new_locs))
+			shallow_copy = CoolObject(self_object.cname,new_attr_and_locs,newloc())
 
-	#-------------------This should be correct, see Rolph's post on Piazza---------------
-	#-------------------Run with easy_copy2.cl------------------------------------------
-			shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs)
-			
-
+	#-------------------This should be correct, see Rolph's post on Piazza
+	#-------------------Run with easy_copy2.cl---------------------------
+			#shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs,newloc())
+			#return shallow_copy,store
 	#--------------------------------------------------------
-			return shallow_copy,store
+			return shallow_copy,s2
 		else:
 			print "Where did this internal come from?"
 			sys.exit(0)
