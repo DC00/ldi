@@ -192,18 +192,21 @@ def find_min(d):
 
 # Returns ancestory list of class a based on pmap
 # e.g. a=IO  return: [IO, Object]
-def get_inhr_list(a, ancestors):
+def get_inhr_list(a, ancestors, e):
+	#if a not in pmap:
+	#	msg = "ERROR: %s: Exception: case on void" % (e.loc)
+	#	sys.exit(msg)
 	if a == "Object":
 		ancestors.append(a)
 		return ancestors
 	else:
 		ancestors.append(a)
-		return get_inhr_list(pmap[a], ancestors)
+		return get_inhr_list(pmap[a], ancestors, e)
 
 # Returns the least common ancestor between class=a and class=b
 def lub(a, b):
-	ancestors_a = get_inhr_list(a, [])
-	ancestors_b = get_inhr_list(b, [])
+	ancestors_a = get_inhr_list(a, [], None)
+	ancestors_b = get_inhr_list(b, [], None)
 	for c in ancestors_a:
 		for c2 in ancestors_b:
 			if c == c2:
@@ -633,6 +636,9 @@ def eval(self_object,store,environment,exp):
 		# TODO: what if they are not in there?
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
 		# look into imp_map
+		if (v0.cname,exp.fname) not in imp_map:
+			msg = "ERROR: %s: Exception: dispatch on void" % (exp.loc)
+			sys.exit(msg)
 		(formals,body) = imp_map[(v0.cname,exp.fname)]
 		# make new locations for each of the formals found in imp_map
 		new_arg_locs = [ newloc() for x in formals]
@@ -670,6 +676,9 @@ def eval(self_object,store,environment,exp):
 		(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
 		# Only change within static_dispatch
 		# v0.cname -> exp.static_type
+		if (v0.cname,exp.fname) not in imp_map:
+			msg = "ERROR: %s: Exception: static dispatch on void" % (exp.loc)
+			sys.exit(msg)
 		(formals,body) = imp_map[(exp.static_type,exp.fname)]
 		new_arg_locs = [ newloc() for x in formals]
 		s_nplus3 = s_nplus2
@@ -791,13 +800,18 @@ def eval(self_object,store,environment,exp):
 
 		distances = {}
 		case_types = [x.type_name.exp for x in exp.case_element_list]
-		case_exp_inhr_list = get_inhr_list(v0.cname, [])	
-		count = 0		
+		case_exp_inhr_list = get_inhr_list(v0.cname, [], e0)	
+		count = 0
+		found = False
 		for i in case_exp_inhr_list:
 			for j in case_types:
 				if i == j:
 					distances[j] = count
+					found = True
 			count += 1
+		if not found:
+			msg = "ERROR: %s: Exception: case without matching branch: %s" % (e0.loc, e0)
+			sys.exit(msg)
 		t_i = find_min(distances)
 
 		l0 = newloc()
@@ -915,6 +929,9 @@ def eval(self_object,store,environment,exp):
 		e2 = exp.exp[1]
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
+		if v2.value == 0:
+			msg = "ERROR: %s: Exception: division by zero" % (e1.loc)
+			sys.exit(msg)
 		new_value = v1.value / v2.value
 		debug_indent() ; debug("ret = %s" % (new_value))
 		debug_indent() ; debug("rets = %s" % (s3))
