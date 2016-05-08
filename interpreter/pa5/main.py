@@ -891,6 +891,10 @@ def eval(self_object,store,environment,exp):
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value + v2.value
+		# Handle wrap-around
+		if new_value > 2147483647:
+			new_value -= 2147483648
+			new_value += -2147483648
 		debug_indent() ; debug("ret = %s" % (new_value))
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
@@ -904,6 +908,10 @@ def eval(self_object,store,environment,exp):
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value - v2.value
+		# Handle wrap-around
+		if new_value < -2147483648:
+			new_value += 2147483648
+			new_value += 2147483648
 		debug_indent() ; debug("ret = %s" % (new_value))
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
@@ -917,6 +925,9 @@ def eval(self_object,store,environment,exp):
 		v1, s2 = eval(self_object,store,environment,e1)
 		v2, s3 = eval(self_object,store,environment,e2)
 		new_value = v1.value * v2.value
+		if new_value > 2147483647:
+			new_value -= 2147483648
+			new_value += -2147483648
 		debug_indent() ; debug("ret = %s" % (new_value))
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
@@ -1062,16 +1073,15 @@ def eval(self_object,store,environment,exp):
 			try:
 				read_line = raw_input()
 				# removing leading and trailing whitespace
-				read_line.strip()
+				read_line = read_line.strip()
 
 				# find all numbers in the string
-				numbers = re.findall(r'[-]?\d+', read_line)
-				if len(numbers) > 0:
-					# Only concerned with first number, CRM
-					first_num = int(numbers[0])
-					if int(first_num) > 2147483647 or int(first_num) < -2147483648 or first_num == None:
+				numbers = re.match(r'[-]?[^.]\d+', read_line)
+				if numbers != None:
+					num = numbers.group()
+					if int(num) > 2147483647 or int(num) < -2147483648:
 						return CoolInt(0),store
-					return CoolInt(int(first_num)),store
+					return CoolInt(int(num)),store
 				else:
 					return CoolInt(0),store
 				return CoolInt(0),store
