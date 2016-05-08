@@ -1004,7 +1004,7 @@ def eval(self_object,store,environment,exp):
 		debug("\nIN INTERNAL\n")
 		fname = exp.exp.split(".")[1]
 		if fname == "out_string":
-			string = store[environment['x']].value.replace("\\n","\n")
+			string = store[environment['x']].value.replace("\\n","\n").replace("\\t","\t")
 			if string != '\x00':
 				sys.stdout.write(string)
 				return self_object,store
@@ -1062,30 +1062,30 @@ def eval(self_object,store,environment,exp):
 			return_str = self_object.cname
 			return CoolString(return_str,len(return_str)),store
 		elif fname == "copy":
-			## get the attributes and make new locations for them
+			# get the attributes and make new locations for them
 
-			attr_list = list(self_object.attr_and_locs.keys())
-			loc_list = list(self_object.attr_and_locs.values())
-			new_locs = [ newloc() for i in attr_list ]
+			#attr_list = list(self_object.attr_and_locs.keys())
+			#loc_list = list(self_object.attr_and_locs.values())
+			#new_locs = [ newloc() for i in attr_list ]
 
-			# get the values from the self object and then putting 
-			# into the store with the new locations
+			## get the values from the self object and then putting 
+			## into the store with the new locations
 
-			values = [ store[i] for i in loc_list ]
-			store_update = dict(zip(new_locs,values))
-			s2 = store
-			for (loc,value) in store_update.iteritems():
-				s2[loc] = value
+			#values = [ store[i] for i in loc_list ]
+			#store_update = dict(zip(new_locs,values))
+			#s2 = store
+			#for (loc,value) in store_update.iteritems():
+			#	s2[loc] = value
 
-			# return a new object with the old attributes to the
-			# new locations
+			## return a new object with the old attributes to the
+			## new locations
 
-			new_attr_and_locs = dict(zip(attr_list,new_locs))
-			shallow_copy = CoolObject(self_object.cname,new_attr_and_locs)
+			#new_attr_and_locs = dict(zip(attr_list,new_locs))
+			#shallow_copy = CoolObject(self_object.cname,new_attr_and_locs)
 
 	#-------------------This should be correct, see Rolph's post on Piazza---------------
 	#-------------------Run with easy_copy2.cl------------------------------------------
-	#		shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs)
+			shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs)
 			
 
 	#--------------------------------------------------------
