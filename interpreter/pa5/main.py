@@ -4,7 +4,7 @@
 # Read in .cl-type file
 # Separate into class_map, imp_map, parent_map, and ast
 import sys, traceback, copy, re
-# try:
+#try:
 class Exp:
 	def __init__(self, loc=None, exp_kind=None, exp=None):
 		self.loc = loc
@@ -582,7 +582,11 @@ def eval(self_object,store,environment,exp):
 		new_attrs_locs = [newloc() for x in attrs_and_inits]
 		attr_names = [attr_name for (attr_name,attr_type,attr_exp) in attrs_and_inits]
 		attrs_and_locs = dict(zip(attr_names, new_attrs_locs))
-		v1 = CoolObject(t0, attrs_and_locs)
+		if t0 in ["String", "Int","Bool"]:
+			v1 = default_value(t0)
+			v1.attr_and_locs = attrs_and_locs
+		else:
+			v1 = CoolObject(t0, attrs_and_locs)
 		# iterate through key,value pairs (attrname to loc)
 		s2 = copy.deepcopy(store)
 		for (attr_name, attr_loc) in attrs_and_locs.iteritems():
