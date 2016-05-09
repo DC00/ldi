@@ -1082,12 +1082,20 @@ try:
 				return self_object,store
 			elif fname == "in_string":
 				try:
-					read_line = raw_input().replace("\\t","\t").replace('\x00', "")
-					if read_line == None:
-						return CoolString("",0),store
-					return CoolString(read_line,len(read_line)),store
-				except:
+					read_line = raw_input()
+					for c in read_line:
+						if chr(ord(c)) == '\x00':
+							return CoolString("",0),store
+					return CoolString(read_line,0),store
+				except EOFError:
 					return CoolString("",0),store
+				#try:
+				#	read_line = raw_input().replace("\\t","\t").replace('\x00', "")
+				#	if read_line == None:
+				#		return CoolString("",0),store
+				#	return CoolString(read_line,len(read_line)),store
+				#except EOFError:
+				#	return CoolString("",0),store
 			elif fname == "in_int":
 				try:
 					read_line = raw_input()
@@ -1103,7 +1111,7 @@ try:
 						return CoolInt(int(num)),store
 					else:
 						return CoolInt(0),store
-				except ValueError, EOFError:
+				except EOFError:
 					return CoolInt(0),store
 			elif fname == "length":
 				return CoolInt(self_object.length),store
