@@ -1095,7 +1095,7 @@ try:
 					read_line = read_line.strip()
 
 					# find all numbers in the string
-					numbers = re.match(r'[-]?[^.]\d+', read_line)
+					numbers = re.match(r'[-+]?\d+', read_line)
 					if numbers != None:
 						num = numbers.group()
 						if int(num) > 2147483647 or int(num) < -2147483648:
