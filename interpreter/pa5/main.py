@@ -64,8 +64,6 @@ try:
 		def __repr__(self):
 			return "Internal(%s,%s,%s)" % (self.parent_class,self.exp, self.return_type)
 
-	#TODO: do for every other expression that is a bitch
-
 	class Assign(Exp):
 		def __init__(self, loc=None, var=None, exp=None):
 			Exp.__init__(self,loc,"assign",exp)
@@ -249,8 +247,6 @@ try:
 	io_cmap = []
 	io_imap = []
 	io_pmap = []
-	#io_argv = []
-	#TODO: Do we find this useful for any case? LUB?
 	io_ast  = []
 
 	in_cmap = True
@@ -643,7 +639,6 @@ try:
 				arg_values.append(arg_value)
 
 			# evaluate receiver object
-			# TODO: what if they are not in there?
 			(v0,s_nplus2) = eval(self_object,current_store,environment,exp.e)
 			# look into imp_map
 			if (v0.cname,exp.fname) not in imp_map:
@@ -1105,13 +1100,6 @@ try:
 					return CoolString(read_line,0),store
 				except EOFError:
 					return CoolString("",0),store
-				#try:
-				#	read_line = raw_input().replace("\\t","\t").replace('\x00', "")
-				#	if read_line == None:
-				#		return CoolString("",0),store
-				#	return CoolString(read_line,len(read_line)),store
-				#except EOFError:
-				#	return CoolString("",0),store
 			elif fname == "in_int":
 				try:
 					read_line = raw_input()
@@ -1173,14 +1161,6 @@ try:
 
 				new_attr_and_locs = dict(zip(attr_list,new_locs))
 				shallow_copy = CoolObject(self_object.cname,new_attr_and_locs,newloc())
-
-#-------------------This should be correct, see Rolph's post on Piazza
-#-------------------Run with easy_copy2.cl---------------------------
-
-				#shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs,newloc())
-				#return shallow_copy,store
-
-#--------------------------------------------------------
 				return shallow_copy,s2
 			else:
 				print "Where did this internal come from?"
