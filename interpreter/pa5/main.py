@@ -579,8 +579,8 @@ try:
 			return (v1,s3)
 
 		elif exp.exp_kind == "new":
-			if activation_record > 1000:
-				sys.exit("ERROR: %s: Exception: stack overflow" % (exp.loc))
+			if activation_record > 999:
+				sys.exit("ERROR: %s: newException: stack overflow" % (exp.loc))
 			activation_record += 1;
 			debug("\nIN NEW\n")
 			t0 = exp.exp
@@ -620,9 +620,8 @@ try:
 			return (v1,final_store)
 
 		elif exp.exp_kind == "self_dispatch":
-			if activation_record > 1000:
-				sys.exit("ERROR: %s: Exception: stack overflow" % (exp.loc))
-			activation_record += 1
+			if activation_record > 999:
+				sys.exit("ERROR: %s: selfException: stack overflow" % (exp.loc))
 			debug("\nIN SELF_DISPATCH\n")
 			# call dynamic_dispatch, but use the self object for the receiver exp
 			self_exp = Exp(0,"identifier","self")
@@ -631,12 +630,11 @@ try:
 			debug_indent() ; debug("ret = %s" % (ret_value))
 			debug_indent() ; debug("rets = %s" % (ret_store))
 			indent_count -= 2
-			activation_record -= 1;
 			return (ret_value,ret_store)
 
 		elif exp.exp_kind == "dynamic_dispatch":
-			if activation_record > 1000:
-				sys.exit("ERROR: %s: Exception: stack overflow" % (exp.loc))
+			if activation_record > 999:
+				sys.exit("ERROR: %s: dynamicException: stack overflow" % (exp.loc))
 			activation_record += 1
 			debug("\nIN DYNAMIC_DISPATCH\n")
 			current_store = store
@@ -682,8 +680,8 @@ try:
 			return (ret_value,ret_store)
 
 		elif exp.exp_kind == "static_dispatch":
-			if activation_record > 1000:
-				sys.exit("ERROR: %s: Exception: stack overflow" % (exp.loc))
+			if activation_record > 999:
+				sys.exit("ERROR: %s: staticException: stack overflow" % (exp.loc))
 			activation_record += 1
 			debug("\nIN STATIC_DISPATCH\n")
 			current_store = store
