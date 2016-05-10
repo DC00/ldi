@@ -616,6 +616,7 @@ try:
 			debug_indent() ; debug("ret = %s" % (v1))
 			debug_indent() ; debug("rets = %s" % (final_store))
 			indent_count -= 2
+			activation_record -= 1;
 			return (v1,final_store)
 
 		elif exp.exp_kind == "self_dispatch":
@@ -630,6 +631,7 @@ try:
 			debug_indent() ; debug("ret = %s" % (ret_value))
 			debug_indent() ; debug("rets = %s" % (ret_store))
 			indent_count -= 2
+			activation_record -= 1;
 			return (ret_value,ret_store)
 
 		elif exp.exp_kind == "dynamic_dispatch":
@@ -676,6 +678,7 @@ try:
 			debug_indent() ; debug("ret = %s" % (ret_value))
 			debug_indent() ; debug("rets = %s" % (ret_store))
 			indent_count -= 2
+			activation_record -= 1;
 			return (ret_value,ret_store)
 
 		elif exp.exp_kind == "static_dispatch":
@@ -710,6 +713,7 @@ try:
 			debug_indent() ; debug("ret = %s" % (ret_value))
 			debug_indent() ; debug("rets = %s" % (ret_store))
 			indent_count -= 2
+			activation_record -= 1;
 			return (ret_value,ret_store)
 
 		elif exp.exp_kind == "if":
