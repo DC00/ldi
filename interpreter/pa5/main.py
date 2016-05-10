@@ -3,6 +3,7 @@
 
 # Read in .cl-type file
 # Separate into class_map, imp_map, parent_map, and ast
+from __future__ import division
 import sys, traceback, copy, re
 sys.setrecursionlimit(10000)
 class Exp:
@@ -976,7 +977,7 @@ def eval(self_object,store,environment,exp):
 		debug_indent() ; debug("ret = %s" % (new_value))
 		debug_indent() ; debug("rets = %s" % (s3))
 		indent_count -= 2
-		return (CoolInt(new_value), s3)
+		return (CoolInt(int(new_value)), s3)
 
 	elif exp.exp_kind in ["lt","le","eq"]:
 		debug("\nIN LT LE EQ\n")
