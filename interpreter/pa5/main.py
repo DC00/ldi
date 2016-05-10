@@ -916,6 +916,9 @@ try:
 			if new_value > 2147483647:
 				new_value -= 2147483648
 				new_value += -2147483648
+			elif new_value < -2147483648:
+				new_value += 2147483648
+				new_value += 2147483648
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (s3))
 			indent_count -= 2
@@ -933,6 +936,9 @@ try:
 			if new_value < -2147483648:
 				new_value += 2147483648
 				new_value += 2147483648
+			elif new_value > 2147483647:
+				new_value -= 2147483648
+				new_value += -2147483648
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (s3))
 			indent_count -= 2
@@ -949,6 +955,9 @@ try:
 			if new_value > 2147483647:
 				new_value -= 2147483648
 				new_value += -2147483648
+			elif new_value < -2147483648:
+				new_value += 2147483648
+				new_value += 2147483648
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (s3))
 			indent_count -= 2
@@ -965,6 +974,12 @@ try:
 				msg = "ERROR: %s: Exception: division by zero" % (e1.loc)
 				sys.exit(msg)
 			new_value = v1.value / v2.value
+			if new_value > 2147483647:
+				new_value -= 2147483648
+				new_value += -2147483648
+			elif new_value < -2147483648:
+				new_value += 2147483648
+				new_value += 2147483648
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (s3))
 			indent_count -= 2
