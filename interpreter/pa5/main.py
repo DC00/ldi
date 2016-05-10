@@ -555,9 +555,6 @@ try:
 
 	def eval(self_object,store,environment,exp):
 		global activation_record
-		if activation_record > 1000:
-			sys.exit("ERROR: %s: Exception: stack overflow" % (exp.loc))
-
 		global indent_count
 		indent_count += 2
 		debug_indent() ; debug("eval: %s" % (exp))
@@ -757,7 +754,6 @@ try:
 		
 		elif exp.exp_kind == "let":
 			debug("\nIN LET\n")
-			# TODO: what about let_no_init?
 			if len(exp.binding_list) == 1:
 				let_exp = exp.binding_list[0]
 				e1 = let_exp.value
@@ -897,6 +893,12 @@ try:
 			e1 = exp.exp
 			v1,s2 = eval(self_object,store,environment,e1)
 			new_value = v1.value * -1
+			if new_value < -2147483648:
+				new_value += 2147483648
+				new_value += 2147483648
+			elif new_value > 2147483647:
+				new_value -= 2147483648
+				new_value += -2147483648
 			debug_indent() ; debug("ret = %s" % (new_value))
 			debug_indent() ; debug("rets = %s" % (store))
 			indent_count -= 2
@@ -1159,11 +1161,13 @@ try:
 				new_attr_and_locs = dict(zip(attr_list,new_locs))
 				shallow_copy = CoolObject(self_object.cname,new_attr_and_locs,newloc())
 
-		#-------------------This should be correct, see Rolph's post on Piazza
-		#-------------------Run with easy_copy2.cl---------------------------
+#-------------------This should be correct, see Rolph's post on Piazza
+#-------------------Run with easy_copy2.cl---------------------------
+
 				#shallow_copy = CoolObject(self_object.cname,self_object.attr_and_locs,newloc())
 				#return shallow_copy,store
-		#--------------------------------------------------------
+
+#--------------------------------------------------------
 				return shallow_copy,s2
 			else:
 				print "Where did this internal come from?"
