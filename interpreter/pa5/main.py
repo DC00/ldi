@@ -566,10 +566,9 @@ try:
 
 		if exp.exp_kind == "assign":
 			debug("\nIN ASSIGN\n")
-			# refer back to FIXME in new
 			(v1,s2) = eval(self_object,store,environment,exp.exp)	
 			l1 = environment[exp.var]	
-			del s2[l1] #FIXME: does this delete every instance?
+			del s2[l1]
 			s3 = s2
 			s3[l1] = v1
 			v1.loc = l1
@@ -610,9 +609,7 @@ try:
 			for (attr_name,_,attr_init) in attrs_and_inits:
 				if attr_init != []:
 					(_,current_store) = eval(v1,final_store,attrs_and_locs,Assign(0,attr_name,attr_init[0]))
-				# FIXME: changed attr_init -> attr_init[0] because list vs no list is weird
 					final_store = copy.deepcopy(current_store)
-				# FIXME: 0 in Assign constructor might make troubles
 			debug_indent() ; debug("ret = %s" % (v1))
 			debug_indent() ; debug("rets = %s" % (final_store))
 			indent_count -= 2
@@ -662,8 +659,8 @@ try:
 			for (l,value) in store_update.iteritems():
 				value.loc = l
 				s_nplus3[l] = value
+
 			# need to have v0.attr_and_locs and imp_map formals to their locations in the new_env
-			# TODO: should put formal parameters first so that they are visible
 			# and they shadow the attributes
 
 			new_environment = copy.deepcopy(v0.attr_and_locs)
@@ -1140,7 +1137,6 @@ try:
 				concat_str = string1 + string2
 				return CoolString(concat_str,len(concat_str)),store
 			elif fname == "substr":
-			# FIXME: needs to stop returning newline
 				string = self_object.value.replace("\\n","\n")
 				beg = int(store[environment['i']].value)
 				length = int(store[environment['l']].value)
