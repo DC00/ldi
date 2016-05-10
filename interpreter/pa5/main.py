@@ -5,7 +5,12 @@
 # Separate into class_map, imp_map, parent_map, and ast
 from __future__ import division
 import sys, traceback, copy, re
+# Need to increase recursion limit to detect stack overflow, Python's 
+# default is kind of low.
 sys.setrecursionlimit(10000)
+
+# Exp object to handle easy expressions
+
 class Exp:
 	def __init__(self, loc=None, exp_kind=None, exp=None):
 		self.loc = loc
@@ -54,6 +59,7 @@ class Exp:
 		else:
 			return "exp not handled in to string"
 
+#Internal handles internal methods such as copy, in_int, substr, etc.
 
 class Internal(Exp):
 	def __init__(self, loc=None,parent_class=None,return_type=None,exp=None):
@@ -63,6 +69,9 @@ class Internal(Exp):
 		
 	def __repr__(self):
 		return "Internal(%s,%s,%s)" % (self.parent_class,self.exp, self.return_type)
+
+#Some expressions require a lot more to work with compared to what the
+#Exp object has to offer
 
 class Assign(Exp):
 	def __init__(self, loc=None, var=None, exp=None):
@@ -125,7 +134,7 @@ class Let_Binding():
 	def __repr__(self):
 		return "Binding(%s,%s,%s)" % (self.variable,self.binding_type,self.value)
 
-#Types of Cool Values: Objects, Ints, Bools
+#Types of CoolObjects: Ints, Bools, Strings, and the general object
 		
 class CoolObject:
 	def __init__(self, cname=None, attr_and_locs={}, loc=0):
@@ -213,6 +222,7 @@ def lub(a, b):
 	return None
 
 # Debugging and Tracing
+
 do_debug = False
 global indent_count
 indent_count = 0
@@ -289,6 +299,8 @@ imp_map = {}
 pmap = {}
 # li : remaining part of class-map
 # helper : function
+
+# All reading in expressions
 
 def read_id(e):
 	idloc = e.pop(0)
@@ -443,7 +455,6 @@ def read_exp(e):
 def read_cmap(cmap_list):
 	num_classes = int(cmap_list.pop(0))
 	while num_classes > 0:
-		# 0 is just for testing. Remove later
 		try:
 			attrs = []
 			cname = cmap_list.pop(0)
@@ -499,6 +510,9 @@ def read_impmap(imap):
 			print e
 			sys.exit(0)
 
+#Reading the parent map to get all the inheritance information for
+#case and the lowest common ancestor algorithm
+
 def read_pmap(pmap_list):
 	num_classes = int(pmap_list.pop(0))
 	while num_classes > 0:
@@ -522,10 +536,14 @@ if do_print:
 
 new_location_counter = 1000
 
+#newloc should create a location for the store that is unique
+
 def newloc():
 	global new_location_counter
 	new_location_counter += 1	
 	return new_location_counter
+
+#default_value means D_t, assigns a default value dependent on type tag
 
 def default_value(typename):
 	if typename == "Int":
@@ -1180,10 +1198,9 @@ env = {}
 # Store is a dictionary that maps addresses to their values
 # e.g. 
 store = {}
-# Self Object
+# Self Object should be void
 self_object = Void()
 
 my_exp = Dynamic_Dispatch(0, Exp(0,"new", "Main"), "main", [])
 
 (new_value, new_store) = eval(self_object, store, env, my_exp)
-
